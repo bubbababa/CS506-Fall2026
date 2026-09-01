@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Conduction in a Metal Plate</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: #0a0e14;
+            color: #c5c8c6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #1e2630;
+        }
+        
+        h1 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #f0c674;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 0.95rem;
+            color: #6b7280;
+            font-weight: 300;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+        
+        .control-panel {
+            background: linear-gradient(145deg, #111821, #0d1117);
+            border: 1px solid #1e2630;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .panel-title {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #81a2be;
+            margin-bottom: 1.25rem;
+        }
+        
+        .plate-diagram {
+            position: relative;
+            background: #0d1117;
+            border: 1px solid #1e2630;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .plate-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        
+        .metal-plate {
+            width: 180px;
+            height: 140px;
+            background: linear-gradient(135deg, #3d4f5f, #2d3a47);
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 1px;
+            padding: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .plate-cell {
+            border-radius: 1px;
+            transition: background-color 0.15s ease;
+        }
+        
+        .heater {
+            width: 30px;
+            height: 140px;
+            background: linear-gradient(180deg, #2d2d2d, #1a1a1a);
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+            position: relative;
+        }
+        
+        .heater::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 8px,
+                #333 8px,
+                #333 10px
+            );
+            border-radius: 0 4px 4px 0;
+            opacity: 0.5;
+        }
+        
+        .heater.active {
+            background: linear-gradient(180deg, #ff6b35, #c9302c);
+            border-color: #ff8c5a;
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.5),
+                        inset 0 0 20px rgba(255, 200, 150, 0.3);
+        }
+        
+        .heater.active::before {
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 8px,
+                rgba(255, 200, 150, 0.4) 8px,
+                rgba(255, 200, 150, 0.4) 10px
+            );
+            opacity: 1;
+        }
+        
+        .heater-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .heater.active .heater-label {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #1e2630;
+        }
+        
+        .status-label {
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+        
+        .status-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            color: #f0c674;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4b5563;
+        }
+        
+        .status-dot.active {
+            background: #ff6b35;
+            box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .instructions {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(129, 162, 190, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #81a2be;
+        }
+        
+        .instructions p {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+        
+        .instructions strong {
+            color: #81a2be;
+        }
+        
+        .visualization-panel {
+            background: linear-gradient(145deg, #111821, #0d1117);
+            border: 1px solid #1e2630;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .viz-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #1e2630;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .viz-title {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #81a2be;
+        }
+        
+        .color-legend {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+        }
+        
+        .legend-gradient {
+            width: 120px;
+            height: 12px;
+            background: linear-gradient(90deg, 
+                #1e3a5f, #2d6a4f, #74c69d, #f9c74f, #f8961e, #f3722c, #ef233c);
+            border-radius: 2px;
+        }
+        
+        .legend-label {
+            color: #6b7280;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        
+        .canvas-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+        
+        .heater-left {
+            width: 30px;
+            height: 140px;
+            background: linear-gradient(180deg, #2d2d2d, #1a1a1a);
+            border-radius: 6px 0 0 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+            position: relative;
+        }
+        
+        .heater-left::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 8px,
+                #333 8px,
+                #333 10px
+            );
+            border-radius: 4px 0 0 4px;
+            opacity: 0.5;
+        }
+        
+        .heater-left.active {
+            background: linear-gradient(180deg, #ff6b35, #c9302c);
+            border-color: #ff8c5a;
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.5),
+                        inset 0 0 20px rgba(255, 200, 150, 0.3);
+        }
+        
+        .heater-left.active::before {
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 8px,
+                rgba(255, 200, 150, 0.4) 8px,
+                rgba(255, 200, 150, 0.4) 10px
+            );
+            opacity: 1;
+        }
+        
+        .heater-left.active .heater-label {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .simulation-divider {
+            margin: 3rem 0;
+            border: none;
+            border-top: 1px solid #1e2630;
+        }
+        
+        .equation-display {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #1e2630;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+        
+        .equation {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            color: #c5c8c6;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+        
+        .equation-label {
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Heat Conduction Simulation</h1>
+            <p class="subtitle">2D Heat Diffusion in a Metal Plate with 3D Visualization</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="panel-title">Schematic View</div>
+                
+                <div class="plate-diagram">
+                    <div class="plate-container">
+                        <div class="metal-plate" id="plateDiagram">
+                            <!-- Cells generated by JS -->
+                        </div>
+                        <div class="heater" id="heater" onclick="toggleHeater()">
+                            <span class="heater-label">HEATER</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Heater Status</span>
+                    <span class="status-indicator">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span class="status-value" id="heaterStatus">OFF</span>
+                    </span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Max Temperature</span>
+                    <span class="status-value" id="maxTemp">20.0°C</span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Min Temperature</span>
+                    <span class="status-value" id="minTemp">20.0°C</span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Time Elapsed</span>
+                    <span class="status-value" id="timeElapsed">0.00s</span>
+                </div>
+                
+                <div class="instructions">
+                    <p><strong>Click the heater</strong> to toggle it on/off and observe how heat propagates through the metal plate according to the heat diffusion equation.</p>
+                </div>
+            </div>
+            
+            <div class="visualization-panel">
+                <div class="viz-header">
+                    <span class="viz-title">3D Temperature Distribution T(x, y, t)</span>
+                    <div class="color-legend">
+                        <span class="legend-label">20°C</span>
+                        <div class="legend-gradient"></div>
+                        <span class="legend-label">100°C</span>
+                    </div>
+                </div>
+                
+                <div id="canvas-container-1" class="canvas-container"></div>
+                
+                <div class="equation-display">
+                    <div>
+                        <div class="equation-label">Heat Equation</div>
+                        <div class="equation">∂T/∂t = α(∂²T/∂x² + ∂²T/∂y²)</div>
+                    </div>
+                    <div>
+                        <div class="equation-label">Thermal Diffusivity</div>
+                        <div class="equation">α = 97 mm²/s (Aluminum)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <hr class="simulation-divider">
+        
+        <!-- Second Simulation: Heater on Left -->
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="panel-title">Schematic View (Heater Left)</div>
+                
+                <div class="plate-diagram">
+                    <div class="plate-container">
+                        <div class="heater-left" id="heater2" onclick="toggleHeater2()">
+                            <span class="heater-label">HEATER</span>
+                        </div>
+                        <div class="metal-plate" id="plateDiagram2">
+                            <!-- Cells generated by JS -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Heater Status</span>
+                    <span class="status-indicator">
+                        <span class="status-dot" id="statusDot2"></span>
+                        <span class="status-value" id="heaterStatus2">OFF</span>
+                    </span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Max Temperature</span>
+                    <span class="status-value" id="maxTemp2">20.0°C</span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Min Temperature</span>
+                    <span class="status-value" id="minTemp2">20.0°C</span>
+                </div>
+                
+                <div class="status-row">
+                    <span class="status-label">Time Elapsed</span>
+                    <span class="status-value" id="timeElapsed2">0.00s</span>
+                </div>
+                
+                <div class="instructions">
+                    <p><strong>Click the heater</strong> to toggle it on/off and observe how heat propagates from the left side.</p>
+                </div>
+            </div>
+            
+            <div class="visualization-panel">
+                <div class="viz-header">
+                    <span class="viz-title">3D Temperature Distribution T(x, y, t)</span>
+                    <div class="color-legend">
+                        <span class="legend-label">20°C</span>
+                        <div class="legend-gradient"></div>
+                        <span class="legend-label">100°C</span>
+                    </div>
+                </div>
+                
+                <div id="canvas-container-2" class="canvas-container"></div>
+                
+                <div class="equation-display">
+                    <div>
+                        <div class="equation-label">Heat Equation</div>
+                        <div class="equation">∂T/∂t = α(∂²T/∂x² + ∂²T/∂y²)</div>
+                    </div>
+                    <div>
+                        <div class="equation-label">Thermal Diffusivity</div>
+                        <div class="equation">α = 97 mm²/s (Aluminum)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulation parameters
+        const GRID_X = 40;
+        const GRID_Y = 30;
+        const AMBIENT_TEMP = 20;
+        const HEATER_TEMP = 100;
+        const DIFFUSIVITY = 0.2; // Scaled for visualization
+        
+        // State for Simulation 1 (heater on right)
+        let temperature1 = [];
+        let heater1On = false;
+        let time1 = 0;
+        
+        // State for Simulation 2 (heater on left)
+        let temperature2 = [];
+        let heater2On = false;
+        let time2 = 0;
+        
+        // Three.js variables for Simulation 1
+        let scene1, camera1, renderer1, mesh1, geometry1;
+        
+        // Three.js variables for Simulation 2
+        let scene2, camera2, renderer2, mesh2, geometry2;
+        
+        // Initialize temperature grid
+        function initTemperature1() {
+            temperature1 = [];
+            for (let i = 0; i < GRID_X; i++) {
+                temperature1[i] = [];
+                for (let j = 0; j < GRID_Y; j++) {
+                    temperature1[i][j] = AMBIENT_TEMP;
+                }
+            }
+        }
+        
+        function initTemperature2() {
+            temperature2 = [];
+            for (let i = 0; i < GRID_X; i++) {
+                temperature2[i] = [];
+                for (let j = 0; j < GRID_Y; j++) {
+                    temperature2[i][j] = AMBIENT_TEMP;
+                }
+            }
+        }
+        
+        // Heat diffusion step using finite differences
+        const COOLING_RATE = 0.015; // Convective cooling coefficient (only when heater off)
+        
+        // Simulation 1: Heater on RIGHT
+        function diffusionStep1() {
+            const newTemp = [];
+            
+            for (let i = 0; i < GRID_X; i++) {
+                newTemp[i] = [];
+                for (let j = 0; j < GRID_Y; j++) {
+                    if (i === GRID_X - 1 && heater1On) {
+                        // Right boundary with heater ON - fixed at heater temperature
+                        newTemp[i][j] = HEATER_TEMP;
+                    } else {
+                        const atLeftEdge = i === 0;
+                        const atRightEdge = i === GRID_X - 1;
+                        const atTopEdge = j === 0;
+                        const atBottomEdge = j === GRID_Y - 1;
+                        
+                        let left, right, up, down;
+                        
+                        if (heater1On) {
+                            // When heater is ON: insulated boundaries (no-flux) except right edge
+                            left = atLeftEdge ? temperature1[i][j] : temperature1[i-1][j];
+                            right = atRightEdge ? HEATER_TEMP : temperature1[i+1][j];
+                            up = atTopEdge ? temperature1[i][j] : temperature1[i][j-1];
+                            down = atBottomEdge ? temperature1[i][j] : temperature1[i][j+1];
+                        } else {
+                            // When heater is OFF: boundaries conduct to ambient
+                            left = atLeftEdge ? AMBIENT_TEMP : temperature1[i-1][j];
+                            right = atRightEdge ? AMBIENT_TEMP : temperature1[i+1][j];
+                            up = atTopEdge ? AMBIENT_TEMP : temperature1[i][j-1];
+                            down = atBottomEdge ? AMBIENT_TEMP : temperature1[i][j+1];
+                        }
+                        
+                        // Diffusion (Laplacian)
+                        const laplacian = left + right + up + down - 4 * temperature1[i][j];
+                        newTemp[i][j] = temperature1[i][j] + DIFFUSIVITY * laplacian;
+                        
+                        // Add convective cooling only when heater is OFF
+                        if (!heater1On) {
+                            newTemp[i][j] -= COOLING_RATE * (temperature1[i][j] - AMBIENT_TEMP);
+                        }
+                        
+                        // Clamp to valid range
+                        newTemp[i][j] = Math.max(AMBIENT_TEMP, Math.min(HEATER_TEMP, newTemp[i][j]));
+                    }
+                }
+            }
+            
+            temperature1 = newTemp;
+            time1 += 0.05;
+        }
+        
+        // Simulation 2: Heater visual on LEFT, but heat comes from RIGHT (counterintuitive!)
+        function diffusionStep2() {
+            const newTemp = [];
+            
+            for (let i = 0; i < GRID_X; i++) {
+                newTemp[i] = [];
+                for (let j = 0; j < GRID_Y; j++) {
+                    if (i === GRID_X - 1 && heater2On) {
+                        // RIGHT boundary heats up (even though heater is shown on left!)
+                        newTemp[i][j] = HEATER_TEMP;
+                    } else {
+                        const atLeftEdge = i === 0;
+                        const atRightEdge = i === GRID_X - 1;
+                        const atTopEdge = j === 0;
+                        const atBottomEdge = j === GRID_Y - 1;
+                        
+                        let left, right, up, down;
+                        
+                        if (heater2On) {
+                            // When heater is ON: heat comes from RIGHT edge
+                            left = atLeftEdge ? temperature2[i][j] : temperature2[i-1][j];
+                            right = atRightEdge ? HEATER_TEMP : temperature2[i+1][j];
+                            up = atTopEdge ? temperature2[i][j] : temperature2[i][j-1];
+                            down = atBottomEdge ? temperature2[i][j] : temperature2[i][j+1];
+                        } else {
+                            // When heater is OFF: boundaries conduct to ambient
+                            left = atLeftEdge ? AMBIENT_TEMP : temperature2[i-1][j];
+                            right = atRightEdge ? AMBIENT_TEMP : temperature2[i+1][j];
+                            up = atTopEdge ? AMBIENT_TEMP : temperature2[i][j-1];
+                            down = atBottomEdge ? AMBIENT_TEMP : temperature2[i][j+1];
+                        }
+                        
+                        // Diffusion (Laplacian)
+                        const laplacian = left + right + up + down - 4 * temperature2[i][j];
+                        newTemp[i][j] = temperature2[i][j] + DIFFUSIVITY * laplacian;
+                        
+                        // Add convective cooling only when heater is OFF
+                        if (!heater2On) {
+                            newTemp[i][j] -= COOLING_RATE * (temperature2[i][j] - AMBIENT_TEMP);
+                        }
+                        
+                        // Clamp to valid range
+                        newTemp[i][j] = Math.max(AMBIENT_TEMP, Math.min(HEATER_TEMP, newTemp[i][j]));
+                    }
+                }
+            }
+            
+            temperature2 = newTemp;
+            time2 += 0.05;
+        }
+        
+        // Color mapping for temperature
+        function tempToColor(t) {
+            const normalized = (t - AMBIENT_TEMP) / (HEATER_TEMP - AMBIENT_TEMP);
+            
+            // Color stops: blue -> teal -> green -> yellow -> orange -> red
+            const colors = [
+                { pos: 0.0, r: 30, g: 58, b: 95 },
+                { pos: 0.2, r: 45, g: 106, b: 79 },
+                { pos: 0.4, r: 116, g: 198, b: 157 },
+                { pos: 0.6, r: 249, g: 199, b: 79 },
+                { pos: 0.8, r: 248, g: 150, b: 30 },
+                { pos: 1.0, r: 239, g: 35, b: 60 }
+            ];
+            
+            let c1, c2;
+            for (let i = 0; i < colors.length - 1; i++) {
+                if (normalized >= colors[i].pos && normalized <= colors[i+1].pos) {
+                    c1 = colors[i];
+                    c2 = colors[i+1];
+                    break;
+                }
+            }
+            
+            if (!c1) {
+                c1 = colors[colors.length - 2];
+                c2 = colors[colors.length - 1];
+            }
+            
+            const localT = (normalized - c1.pos) / (c2.pos - c1.pos);
+            const r = Math.round(c1.r + (c2.r - c1.r) * localT);
+            const g = Math.round(c1.g + (c2.g - c1.g) * localT);
+            const b = Math.round(c1.b + (c2.b - c1.b) * localT);
+            
+            return { r, g, b };
+        }
+        
+        // Initialize Three.js for a simulation
+        function initThreeJS(containerId, simNum) {
+            const container = document.getElementById(containerId);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0d1117);
+            
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(60, 40, 60);
+            camera.lookAt(0, 0, 0);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            
+            // Create surface geometry
+            const geometry = new THREE.PlaneGeometry(50, 40, GRID_X - 1, GRID_Y - 1);
+            geometry.rotateX(-Math.PI / 2);
+            
+            const material = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            // Add grid helper
+            const gridHelper = new THREE.GridHelper(60, 20, 0x1e2630, 0x1e2630);
+            gridHelper.position.y = -1;
+            scene.add(gridHelper);
+            
+            // Add axes
+            const axesGroup = new THREE.Group();
+            
+            // X axis
+            const xLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(-30, 0, 0),
+                    new THREE.Vector3(30, 0, 0)
+                ]),
+                new THREE.LineBasicMaterial({ color: 0x81a2be })
+            );
+            axesGroup.add(xLine);
+            
+            // Z axis
+            const zLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, 0, -25),
+                    new THREE.Vector3(0, 0, 25)
+                ]),
+                new THREE.LineBasicMaterial({ color: 0x81a2be })
+            );
+            axesGroup.add(zLine);
+            
+            // Y axis (temperature)
+            const yLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(30, 0, -25),
+                    new THREE.Vector3(30, 30, -25)
+                ]),
+                new THREE.LineBasicMaterial({ color: 0xf0c674 })
+            );
+            axesGroup.add(yLine);
+            
+            scene.add(axesGroup);
+            
+            // Mouse controls for rotation
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let rotation = { x: 0.3, y: 0.5 };
+            
+            container.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+                
+                rotation.y += deltaX * 0.005;
+                rotation.x += deltaY * 0.005;
+                rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.x));
+                
+                updateCameraPosition();
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            container.addEventListener('mouseup', () => isDragging = false);
+            container.addEventListener('mouseleave', () => isDragging = false);
+            
+            function updateCameraPosition() {
+                const radius = 90;
+                camera.position.x = radius * Math.sin(rotation.y) * Math.cos(rotation.x);
+                camera.position.y = radius * Math.sin(rotation.x) + 20;
+                camera.position.z = radius * Math.cos(rotation.y) * Math.cos(rotation.x);
+                camera.lookAt(0, 10, 0);
+            }
+            
+            updateCameraPosition();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+            
+            // Store references
+            if (simNum === 1) {
+                scene1 = scene;
+                camera1 = camera;
+                renderer1 = renderer;
+                geometry1 = geometry;
+                mesh1 = mesh;
+            } else {
+                scene2 = scene;
+                camera2 = camera;
+                renderer2 = renderer;
+                geometry2 = geometry;
+                mesh2 = mesh;
+            }
+        }
+        
+        // Update 3D visualization for simulation 1
+        function updateVisualization1() {
+            const positions = geometry1.attributes.position.array;
+            const colors = new Float32Array(positions.length);
+            
+            for (let j = 0; j < GRID_Y; j++) {
+                for (let i = 0; i < GRID_X; i++) {
+                    const idx = j * GRID_X + i;
+                    const vertexIdx = idx * 3;
+                    
+                    const temp = temperature1[i][j];
+                    const height = ((temp - AMBIENT_TEMP) / (HEATER_TEMP - AMBIENT_TEMP)) * 25;
+                    positions[vertexIdx + 1] = height;
+                    
+                    const color = tempToColor(temp);
+                    colors[vertexIdx] = color.r / 255;
+                    colors[vertexIdx + 1] = color.g / 255;
+                    colors[vertexIdx + 2] = color.b / 255;
+                }
+            }
+            
+            geometry1.attributes.position.needsUpdate = true;
+            geometry1.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry1.computeVertexNormals();
+        }
+        
+        // Update 3D visualization for simulation 2
+        function updateVisualization2() {
+            const positions = geometry2.attributes.position.array;
+            const colors = new Float32Array(positions.length);
+            
+            for (let j = 0; j < GRID_Y; j++) {
+                for (let i = 0; i < GRID_X; i++) {
+                    const idx = j * GRID_X + i;
+                    const vertexIdx = idx * 3;
+                    
+                    const temp = temperature2[i][j];
+                    const height = ((temp - AMBIENT_TEMP) / (HEATER_TEMP - AMBIENT_TEMP)) * 25;
+                    positions[vertexIdx + 1] = height;
+                    
+                    const color = tempToColor(temp);
+                    colors[vertexIdx] = color.r / 255;
+                    colors[vertexIdx + 1] = color.g / 255;
+                    colors[vertexIdx + 2] = color.b / 255;
+                }
+            }
+            
+            geometry2.attributes.position.needsUpdate = true;
+            geometry2.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry2.computeVertexNormals();
+        }
+        
+        // Update 2D plate diagram for simulation 1
+        function updatePlateDiagram1() {
+            const cells = document.querySelectorAll('#plateDiagram .plate-cell');
+            const stepX = Math.floor(GRID_X / 10);
+            const stepY = Math.floor(GRID_Y / 8);
+            
+            cells.forEach((cell, idx) => {
+                const cellX = idx % 10;
+                const cellY = Math.floor(idx / 10);
+                const gridX = Math.min(cellX * stepX, GRID_X - 1);
+                const gridY = Math.min(cellY * stepY, GRID_Y - 1);
+                const temp = temperature1[gridX][gridY];
+                const color = tempToColor(temp);
+                cell.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            });
+        }
+        
+        // Update 2D plate diagram for simulation 2
+        function updatePlateDiagram2() {
+            const cells = document.querySelectorAll('#plateDiagram2 .plate-cell');
+            const stepX = Math.floor(GRID_X / 10);
+            const stepY = Math.floor(GRID_Y / 8);
+            
+            cells.forEach((cell, idx) => {
+                const cellX = idx % 10;
+                const cellY = Math.floor(idx / 10);
+                const gridX = Math.min(cellX * stepX, GRID_X - 1);
+                const gridY = Math.min(cellY * stepY, GRID_Y - 1);
+                const temp = temperature2[gridX][gridY];
+                const color = tempToColor(temp);
+                cell.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            });
+        }
+        
+        // Update stats display for simulation 1
+        function updateStats1() {
+            let maxT = AMBIENT_TEMP;
+            let minT = HEATER_TEMP;
+            
+            for (let i = 0; i < GRID_X; i++) {
+                for (let j = 0; j < GRID_Y; j++) {
+                    maxT = Math.max(maxT, temperature1[i][j]);
+                    minT = Math.min(minT, temperature1[i][j]);
+                }
+            }
+            
+            document.getElementById('maxTemp').textContent = maxT.toFixed(1) + '°C';
+            document.getElementById('minTemp').textContent = minT.toFixed(1) + '°C';
+            document.getElementById('timeElapsed').textContent = time1.toFixed(2) + 's';
+        }
+        
+        // Update stats display for simulation 2
+        function updateStats2() {
+            let maxT = AMBIENT_TEMP;
+            let minT = HEATER_TEMP;
+            
+            for (let i = 0; i < GRID_X; i++) {
+                for (let j = 0; j < GRID_Y; j++) {
+                    maxT = Math.max(maxT, temperature2[i][j]);
+                    minT = Math.min(minT, temperature2[i][j]);
+                }
+            }
+            
+            document.getElementById('maxTemp2').textContent = maxT.toFixed(1) + '°C';
+            document.getElementById('minTemp2').textContent = minT.toFixed(1) + '°C';
+            document.getElementById('timeElapsed2').textContent = time2.toFixed(2) + 's';
+        }
+        
+        // Toggle heater 1 (right side)
+        function toggleHeater() {
+            heater1On = !heater1On;
+            
+            const heater = document.getElementById('heater');
+            const statusDot = document.getElementById('statusDot');
+            const heaterStatus = document.getElementById('heaterStatus');
+            
+            if (heater1On) {
+                heater.classList.add('active');
+                statusDot.classList.add('active');
+                heaterStatus.textContent = 'ON';
+                heaterStatus.style.color = '#ff6b35';
+            } else {
+                heater.classList.remove('active');
+                statusDot.classList.remove('active');
+                heaterStatus.textContent = 'OFF';
+                heaterStatus.style.color = '#f0c674';
+            }
+        }
+        
+        // Toggle heater 2 (left side)
+        function toggleHeater2() {
+            heater2On = !heater2On;
+            
+            const heater = document.getElementById('heater2');
+            const statusDot = document.getElementById('statusDot2');
+            const heaterStatus = document.getElementById('heaterStatus2');
+            
+            if (heater2On) {
+                heater.classList.add('active');
+                statusDot.classList.add('active');
+                heaterStatus.textContent = 'ON';
+                heaterStatus.style.color = '#ff6b35';
+            } else {
+                heater.classList.remove('active');
+                statusDot.classList.remove('active');
+                heaterStatus.textContent = 'OFF';
+                heaterStatus.style.color = '#f0c674';
+            }
+        }
+        
+        // Create plate diagram cells for simulation 1
+        function createPlateCells1() {
+            const plate = document.getElementById('plateDiagram');
+            for (let i = 0; i < 80; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'plate-cell';
+                cell.style.backgroundColor = `rgb(30, 58, 95)`;
+                plate.appendChild(cell);
+            }
+        }
+        
+        // Create plate diagram cells for simulation 2
+        function createPlateCells2() {
+            const plate = document.getElementById('plateDiagram2');
+            for (let i = 0; i < 80; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'plate-cell';
+                cell.style.backgroundColor = `rgb(30, 58, 95)`;
+                plate.appendChild(cell);
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Run diffusion steps
+            diffusionStep1();
+            diffusionStep2();
+            
+            // Update visualizations
+            updateVisualization1();
+            updateVisualization2();
+            updatePlateDiagram1();
+            updatePlateDiagram2();
+            updateStats1();
+            updateStats2();
+            
+            // Render both scenes
+            renderer1.render(scene1, camera1);
+            renderer2.render(scene2, camera2);
+        }
+        
+        // Initialize
+        initTemperature1();
+        initTemperature2();
+        createPlateCells1();
+        createPlateCells2();
+        initThreeJS('canvas-container-1', 1);
+        initThreeJS('canvas-container-2', 2);
+        animate();
+    </script>
+</body>
+</html>
+

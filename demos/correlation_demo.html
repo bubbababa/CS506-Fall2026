@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Correlation Coefficient Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .formula-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .formula {
+            font-size: 2.2em;
+            font-family: 'Times New Roman', serif;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .fraction {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .numerator {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-bottom: 2px;
+        }
+        
+        .fraction-line {
+            border-top: 2px solid #2c3e50;
+            margin: 3px 0;
+        }
+        
+        .denominator {
+            color: #3498db;
+            font-size: 0.9em;
+            margin-top: 2px;
+        }
+        
+        .explanation {
+            font-size: 1.1em;
+            color: #555;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .chart-section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .chart-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .correlation-slider {
+            flex: 1;
+            height: 8px;
+            background: #ddd;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .correlation-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .correlation-value {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .correlation-strength {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .strength-strong { background: #e8f5e8; color: #27ae60; }
+        .strength-moderate { background: #fff3cd; color: #f39c12; }
+        .strength-weak { background: #f8d7da; color: #e74c3c; }
+        
+        .three-point-demo {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+        
+        .three-point-demo h3 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .three-points-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .three-point-plot {
+            flex: 1;
+            height: 200px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #e74c3c;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .point-label {
+            position: absolute;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #2c3e50;
+            transform: translate(-50%, -50%);
+        }
+        
+        .mean-line {
+            position: absolute;
+            background: #3498db;
+        }
+        
+        .mean-line.horizontal {
+            height: 2px;
+            width: 100%;
+        }
+        
+        .mean-line.vertical {
+            width: 2px;
+            height: 100%;
+        }
+        
+        .calculation-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .calculation-details h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .calculation-step {
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .interactive-three-point {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #e74c3c;
+        }
+        
+        .interactive-three-point h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-align: center;
+        }
+        
+        .interactive-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        
+        .interactive-plot-container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .interactive-plot {
+            width: 100%;
+            height: min(75vh, 700px);
+            min-height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+            background: #fafafa;
+        }
+        
+        .interactive-plot svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .draggable-point {
+            cursor: move;
+            transition: r 0.1s;
+        }
+        
+        .draggable-point:hover {
+            r: 8;
+        }
+        
+        .diagonal-line {
+            stroke: #95a5a6;
+            stroke-width: 1;
+            stroke-dasharray: 5,5;
+            opacity: 0.5;
+        }
+        
+        .correlation-panel {
+            flex: 0 0 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .correlation-panel h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        
+        .correlation-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .correlation-value-large {
+            font-size: 3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        
+        .correlation-strength-display {
+            font-size: 1.2em;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .point-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .point-info strong {
+            color: #2c3e50;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .action-button:hover {
+            background: #2980b9;
+        }
+        
+        .action-button.reset {
+            background: #e74c3c;
+        }
+        
+        .action-button.reset:hover {
+            background: #c0392b;
+        }
+        
+        .instructions {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #2c3e50;
+        }
+        
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interactive Correlation Coefficient Demo</h1>
+            <p>Explore how correlation affects data relationships</p>
+        </div>
+        
+        <div class="content">
+            <!-- Correlation Formula Section -->
+            <div class="formula-section">
+                <div class="formula">
+                    r = <span class="fraction">
+                        <div class="numerator">Σ(x - x̄)(y - ȳ)</div>
+                        <div class="fraction-line"></div>
+                        <div class="denominator">√[Σ(x - x̄)² × Σ(y - ȳ)²]</div>
+                    </span>
+                </div>
+                <div class="explanation">
+                    <strong>What is Correlation?</strong><br>
+                    Correlation measures how two variables change together. It's a ratio of how much the variables deviate from their means in the same direction (numerator) compared to their total individual variation (denominator). When r = +1, variables move perfectly together; when r = -1, they move in perfect opposition; when r = 0, there's no linear relationship.
+                </div>
+            </div>
+            
+            <!-- Interactive N-Point Correlation Explorer -->
+            <div class="interactive-three-point">
+                <h2>Interactive Correlation Explorer</h2>
+                <div class="interactive-container">
+                    <div class="interactive-plot-container">
+                        <div class="slider-container" style="margin-bottom: 10px;">
+                            <label>Number of points on y=x:</label>
+                            <input type="number" id="numPointsInput" min="2" max="15" value="3" style="width: 60px; padding: 5px; font-size: 1em;">
+                            <button class="action-button" onclick="applyNumPoints()" style="flex: 0 0 auto;">Apply</button>
+                        </div>
+                        <div class="interactive-plot" id="interactivePlot">
+                            <svg id="plotSvg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <pattern id="gridDotted" width="25" height="25" patternUnits="userSpaceOnUse">
+                                        <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#ccc" stroke-width="0.5" stroke-dasharray="2,4"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" fill="url(#gridDotted)" />
+                                <g id="axesGroup"></g>
+                                <line id="diagonalLine" class="diagonal-line"/>
+                                <g id="contourGroup"></g>
+                                <g id="pointsGroup"></g>
+                            </svg>
+                        </div>
+                        <div class="button-group" style="flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 8px; padding: 8px;">
+                                <input type="checkbox" id="lockToContourCheckbox">
+                                <span>Lock to contour (slide selected point on contour only)</span>
+                            </label>
+                            <button class="action-button" onclick="snapToDiagonal()">Snap to y=x Line</button>
+                            <button class="action-button reset" onclick="resetPoints()">Reset</button>
+                        </div>
+                    </div>
+                    
+                    <div class="correlation-panel">
+                        <h3>Correlation Impact</h3>
+                        <div class="correlation-display">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Correlation Coefficient</div>
+                            <div id="correlationValue" class="correlation-value-large">1.000</div>
+                            <div id="correlationStrength" class="correlation-strength-display strength-strong">Perfect Positive</div>
+                        </div>
+                        
+                        <div id="pointInfoContainer" class="point-info"></div>
+                        
+                        <div class="instructions">
+                            <strong>Instructions:</strong>
+                            <ul>
+                                <li>Drag any point to explore correlation. Other points stay fixed.</li>
+                                <li>Contour shows where the selected point can move (others fixed) to keep correlation constant.</li>
+                                <li>Check "Lock to contour" to slide the selected point only along the contour (correlation stays fixed).</li>
+                                <li>Use "Snap to y=x" to align all points to the diagonal.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Linear Correlation Section -->
+            <div class="chart-section">
+                <h2>Linear Correlation: Study Hours vs GPA</h2>
+                <div class="slider-container">
+                    <label>Correlation Coefficient:</label>
+                    <input type="range" class="correlation-slider" id="linearSlider" 
+                           min="-1" max="1" step="0.01" value="0.8">
+                    <div class="correlation-value" id="linearValue">0.80</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="linearChart"></canvas>
+                </div>
+                <div class="stats-panel">
+                    <div class="stat-card">
+                        <div class="stat-label">R²</div>
+                        <div class="stat-value" id="linearR2">0.64</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Slope</div>
+                        <div class="stat-value" id="linearSlope">0.030</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Strength</div>
+                        <div class="stat-value" id="linearStrength">Strong Positive</div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <!-- Categorical Correlation Section -->
+            <div class="chart-section">
+                <h2>Categorical Correlation: Income Level vs Satisfaction</h2>
+                <div class="slider-container">
+                    <label>Correlation Coefficient:</label>
+                    <input type="range" class="correlation-slider" id="categoricalSlider" 
+                           min="-1" max="1" step="0.01" value="0.6">
+                    <div class="correlation-value" id="categoricalValue">0.60</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="categoricalChart"></canvas>
+                </div>
+                <div class="stats-panel">
+                    <div class="stat-card">
+                        <div class="stat-label">R²</div>
+                        <div class="stat-value" id="categoricalR2">0.36</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Eta²</div>
+                        <div class="stat-value" id="categoricalEta2">0.36</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Strength</div>
+                        <div class="stat-value" id="categoricalStrength">Moderate Positive</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let linearChart, categoricalChart;
+        
+        // Interactive N-point correlation demo
+        const POINT_COLORS = ['#e74c3c', '#3498db', '#27ae60', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22', '#34495e'];
+        let points = [];
+        let draggingPoint = null;
+        let selectedPointIndex = null;  // which point's contour to show
+        let dragOffset = { x: 0, y: 0 };
+        
+        // SVG: 500x500, axes centered at origin; data range symmetric
+        const SVG_SIZE = 500;
+        const PADDING = 50;
+        const PLOT_SIZE = SVG_SIZE - 2 * PADDING;
+        const DATA_EXTENT = 5;     // plot spans [-5, 5]
+        const DATA_MIN = -DATA_EXTENT;
+        const DATA_MAX = DATA_EXTENT;
+        const POINT_MIN = -1;     // points constrained to [-1, 1]
+        const POINT_MAX = 1;
+        const ORIGIN_SVG = PADDING + PLOT_SIZE / 2;
+        
+        function dataToSvgX(x) {
+            return ORIGIN_SVG + (x / DATA_EXTENT) * (PLOT_SIZE / 2);
+        }
+        
+        function dataToSvgY(y) {
+            return ORIGIN_SVG - (y / DATA_EXTENT) * (PLOT_SIZE / 2);
+        }
+        
+        function svgToDataX(svgX) {
+            return ((svgX - ORIGIN_SVG) / (PLOT_SIZE / 2)) * DATA_EXTENT;
+        }
+        
+        function svgToDataY(svgY) {
+            return -((svgY - ORIGIN_SVG) / (PLOT_SIZE / 2)) * DATA_EXTENT;
+        }
+        
+        function roundToStep(value, step) {
+            return Math.round(value / step) * step;
+        }
+        
+        function drawAxesAndLattice() {
+            const g = document.getElementById('axesGroup');
+            g.innerHTML = '';
+            const x0 = dataToSvgX(0), y0 = dataToSvgY(0);
+            const left = dataToSvgX(DATA_MIN), right = dataToSvgX(DATA_MAX);
+            const bottom = dataToSvgY(DATA_MIN), top = dataToSvgY(DATA_MAX);
+            // Dotted lattice lines at integer steps
+            for (let v = Math.ceil(DATA_MIN); v <= Math.floor(DATA_MAX); v++) {
+                if (v === 0) continue;
+                const sx = dataToSvgX(v);
+                const sy = dataToSvgY(v);
+                const lineV = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                lineV.setAttribute('x1', sx); lineV.setAttribute('y1', top);
+                lineV.setAttribute('x2', sx); lineV.setAttribute('y2', bottom);
+                lineV.setAttribute('stroke', '#bbb'); lineV.setAttribute('stroke-width', '0.5');
+                lineV.setAttribute('stroke-dasharray', '3,4');
+                g.appendChild(lineV);
+                const lineH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                lineH.setAttribute('x1', left); lineH.setAttribute('y1', sy);
+                lineH.setAttribute('x2', right); lineH.setAttribute('y2', sy);
+                lineH.setAttribute('stroke', '#bbb'); lineH.setAttribute('stroke-width', '0.5');
+                lineH.setAttribute('stroke-dasharray', '3,4');
+                g.appendChild(lineH);
+            }
+            // Axes through origin
+            const axisStroke = '#2c3e50';
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', left); xAxis.setAttribute('y1', y0);
+            xAxis.setAttribute('x2', right); xAxis.setAttribute('y2', y0);
+            xAxis.setAttribute('stroke', axisStroke); xAxis.setAttribute('stroke-width', '2');
+            g.appendChild(xAxis);
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', x0); yAxis.setAttribute('y1', top);
+            yAxis.setAttribute('x2', x0); yAxis.setAttribute('y2', bottom);
+            yAxis.setAttribute('stroke', axisStroke); yAxis.setAttribute('stroke-width', '2');
+            g.appendChild(yAxis);
+            // Axis labels
+            [-5,-2,2,5].forEach(v => {
+                const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tx.setAttribute('x', dataToSvgX(v)); tx.setAttribute('y', y0 + 18);
+                tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('font-size', '12');
+                tx.setAttribute('fill', '#2c3e50'); tx.textContent = v;
+                g.appendChild(tx);
+                const ty = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                ty.setAttribute('x', x0 - 10); ty.setAttribute('y', dataToSvgY(v));
+                ty.setAttribute('text-anchor', 'end'); ty.setAttribute('dominant-baseline', 'middle');
+                ty.setAttribute('font-size', '12'); ty.setAttribute('fill', '#2c3e50');
+                ty.textContent = v;
+                g.appendChild(ty);
+            });
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', right + 15); xLabel.setAttribute('y', y0);
+            xLabel.setAttribute('text-anchor', 'start'); xLabel.setAttribute('dominant-baseline', 'middle');
+            xLabel.setAttribute('font-size', '14'); xLabel.setAttribute('fill', '#2c3e50');
+            xLabel.textContent = 'X';
+            g.appendChild(xLabel);
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', x0); yLabel.setAttribute('y', top - 12);
+            yLabel.setAttribute('text-anchor', 'middle'); yLabel.setAttribute('font-size', '14');
+            yLabel.setAttribute('fill', '#2c3e50'); yLabel.textContent = 'Y';
+            g.appendChild(yLabel);
+            // Diagonal y=x
+            const diag = document.getElementById('diagonalLine');
+            diag.setAttribute('x1', left); diag.setAttribute('y1', bottom);
+            diag.setAttribute('x2', right); diag.setAttribute('y2', top);
+        }
+        
+        function createPointsOnDiagonal(n) {
+            points = [];
+            const span = POINT_MAX - POINT_MIN;
+            for (let i = 0; i < n; i++) {
+                const t = n === 1 ? 0 : POINT_MIN + (span * i) / (n - 1);
+                points.push({ x: t, y: t, element: null, labelEl: null });
+            }
+        }
+        
+        function calculateCorrelation() {
+            const x = points.map(p => p.x);
+            const y = points.map(p => p.y);
+            return correlationFromArrays(x, y);
+        }
+        
+        function correlationFromArrays(x, y) {
+            const n = x.length;
+            const xMean = x.reduce((sum, val) => sum + val, 0) / n;
+            const yMean = y.reduce((sum, val) => sum + val, 0) / n;
+            let numerator = 0, xVariance = 0, yVariance = 0;
+            for (let i = 0; i < n; i++) {
+                const xDiff = x[i] - xMean, yDiff = y[i] - yMean;
+                numerator += xDiff * yDiff;
+                xVariance += xDiff * xDiff;
+                yVariance += yDiff * yDiff;
+            }
+            const denominator = Math.sqrt(xVariance * yVariance);
+            const r = denominator === 0 ? 0 : numerator / denominator;
+            return isNaN(r) ? 0 : r;
+        }
+        
+        // Correlation if point at index 'replaceIdx' is at (px, py); all OTHER points stay fixed at current positions
+        function correlationWithPointAt(replaceIdx, px, py) {
+            const x = points.map((p, i) => i === replaceIdx ? px : p.x);
+            const y = points.map((p, i) => i === replaceIdx ? py : p.y);
+            return correlationFromArrays(x, y);
+        }
+        
+        // Cached contour polylines in data coords [[x,y], ...] per path, for snap-to-contour mode
+        let contourPolylines = [];
+        let contourRTarget = 0;  // correlation value this contour was drawn for
+        
+        function updateCorrelationDisplay() {
+            const correlation = calculateCorrelation();
+            const correlationEl = document.getElementById('correlationValue');
+            const strengthEl = document.getElementById('correlationStrength');
+            
+            correlationEl.textContent = correlation.toFixed(3);
+            
+            const absCorr = Math.abs(correlation);
+            let strengthText, strengthClass;
+            
+            if (absCorr >= 0.99) {
+                strengthText = correlation > 0 ? 'Perfect Positive' : 'Perfect Negative';
+                strengthClass = 'strength-strong';
+            } else if (absCorr >= 0.7) {
+                strengthText = correlation > 0 ? 'Strong Positive' : 'Strong Negative';
+                strengthClass = 'strength-strong';
+            } else if (absCorr >= 0.5) {
+                strengthText = correlation > 0 ? 'Moderate Positive' : 'Moderate Negative';
+                strengthClass = 'strength-moderate';
+            } else if (absCorr >= 0.3) {
+                strengthText = correlation > 0 ? 'Weak Positive' : 'Weak Negative';
+                strengthClass = 'strength-weak';
+            } else {
+                strengthText = 'Very Weak / No Correlation';
+                strengthClass = 'strength-weak';
+            }
+            
+            strengthEl.textContent = strengthText;
+            strengthEl.className = `correlation-strength-display ${strengthClass}`;
+        }
+        
+        function updatePointDisplay() {
+            const container = document.getElementById('pointInfoContainer');
+            container.innerHTML = points.map((p, i) => {
+                const sel = selectedPointIndex === i ? ' (selected — contour for this point)' : '';
+                return `<div class="point-info"><strong>Point ${i + 1}${sel}:</strong><br><span>(${p.x.toFixed(2)}, ${p.y.toFixed(2)})</span></div>`;
+            }).join('');
+        }
+        
+        function updatePointPosition(index) {
+            const point = points[index];
+            const svgX = dataToSvgX(point.x);
+            const svgY = dataToSvgY(point.y);
+            point.element.setAttribute('cx', svgX);
+            point.element.setAttribute('cy', svgY);
+            if (point.labelEl) {
+                point.labelEl.setAttribute('x', svgX);
+                point.labelEl.setAttribute('y', svgY - 12);
+            }
+        }
+        
+        function drawContourLines() {
+            const g = document.getElementById('contourGroup');
+            g.innerHTML = '';
+            contourPolylines = [];
+            if (selectedPointIndex == null || points.length < 2) return;
+            const rTarget = calculateCorrelation();
+            contourRTarget = rTarget;
+            const gridRes = 100;
+            const xMin = DATA_MIN, xMax = DATA_MAX;
+            const dx = (xMax - xMin) / gridRes;
+            const grid = [];
+            for (let j = 0; j <= gridRes; j++) {
+                const row = [];
+                const y = xMin + j * dx;
+                for (let i = 0; i <= gridRes; i++) {
+                    const x = xMin + i * dx;
+                    const r = correlationWithPointAt(selectedPointIndex, x, y);
+                    row.push(r);
+                }
+                grid.push(row);
+            }
+            const segments = [];
+            for (let j = 0; j < gridRes; j++) {
+                for (let i = 0; i < gridRes; i++) {
+                    const v00 = grid[j][i], v10 = grid[j][i+1], v01 = grid[j+1][i], v11 = grid[j+1][i+1];
+                    const x0 = xMin + i * dx, x1 = xMin + (i+1) * dx;
+                    const y0 = xMin + j * dx, y1 = xMin + (j+1) * dx;
+                    const pts = [];
+                    if ((v00 - rTarget) * (v10 - rTarget) < 0 && v10 !== v00)
+                        pts.push([x0 + (rTarget - v00) / (v10 - v00) * dx, y0]);
+                    if ((v10 - rTarget) * (v11 - rTarget) < 0 && v11 !== v10)
+                        pts.push([x1, y0 + (rTarget - v10) / (v11 - v10) * dx]);
+                    if ((v11 - rTarget) * (v01 - rTarget) < 0 && v01 !== v11)
+                        pts.push([x0 + (rTarget - v01) / (v11 - v01) * dx, y1]);
+                    if ((v01 - rTarget) * (v00 - rTarget) < 0 && v00 !== v01)
+                        pts.push([x0, y0 + (rTarget - v00) / (v01 - v00) * dx]);
+                    if (pts.length === 2)
+                        segments.push([[pts[0][0], pts[0][1]], [pts[1][0], pts[1][1]]]);
+                    else if (pts.length === 4)
+                        { segments.push([pts[0], pts[2]]); segments.push([pts[1], pts[3]]); }
+                }
+            }
+            if (segments.length === 0) return;
+            const key = (a) => `${(Math.round(a[0]*1e5)/1e5)},${(Math.round(a[1]*1e5)/1e5)}`;
+            const segs = segments.map(([a, b]) => ({ a, b, ka: key(a), kb: key(b) }));
+            const paths = [];
+            const polylineData = [];
+            const used = new Set();
+            for (let i = 0; i < segs.length; i++) {
+                if (used.has(i)) continue;
+                const polyline = [];
+                let [cur, curKey] = [segs[i].a, segs[i].ka];
+                polyline.push([cur[0], cur[1]]);
+                used.add(i);
+                let [next, nextKey] = [segs[i].b, segs[i].kb];
+                polyline.push([next[0], next[1]]);
+                cur = next; curKey = nextKey;
+                for (;;) {
+                    let found = false;
+                    for (let j = 0; j < segs.length; j++) {
+                        if (used.has(j)) continue;
+                        const s = segs[j];
+                        if (s.ka === curKey) { next = s.b; nextKey = s.kb; used.add(j); found = true; break; }
+                        if (s.kb === curKey) { next = s.a; nextKey = s.ka; used.add(j); found = true; break; }
+                    }
+                    if (!found) break;
+                    polyline.push([next[0], next[1]]);
+                    cur = next; curKey = nextKey;
+                }
+                polylineData.push(polyline);
+                const d = 'M ' + polyline.map(([px, py]) => `${dataToSvgX(px)} ${dataToSvgY(py)}`).join(' L ');
+                paths.push(d);
+            }
+            contourPolylines = polylineData;
+            paths.forEach(pathD => {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathD);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', POINT_COLORS[selectedPointIndex % POINT_COLORS.length]);
+                path.setAttribute('stroke-opacity', '0.9');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('stroke-dasharray', '6,4');
+                g.appendChild(path);
+            });
+        }
+        
+        function closestPointOnContour(svgX, svgY) {
+            if (contourPolylines.length === 0 || selectedPointIndex == null) return null;
+            const dataX = svgToDataX(svgX), dataY = svgToDataY(svgY);
+            let best = null, bestDist2 = Infinity;
+            for (const poly of contourPolylines) {
+                for (let k = 0; k < poly.length - 1; k++) {
+                    const a = poly[k], b = poly[k + 1];
+                    const ax = a[0], ay = a[1], bx = b[0], by = b[1];
+                    const dx = bx - ax, dy = by - ay;
+                    const len2 = dx * dx + dy * dy;
+                    const t = len2 <= 1e-20 ? 0 : Math.max(0, Math.min(1, ((dataX - ax) * dx + (dataY - ay) * dy) / len2));
+                    const px = ax + t * dx, py = ay + t * dy;
+                    const d2 = (dataX - px) ** 2 + (dataY - py) ** 2;
+                    if (d2 < bestDist2) { bestDist2 = d2; best = [px, py]; }
+                }
+            }
+            if (best == null) return null;
+            return refinePointOnContour(best[0], best[1]);
+        }
+        
+        function refinePointOnContour(x0, y0) {
+            const idx = selectedPointIndex;
+            const target = contourRTarget;
+            let x = x0, y = y0;
+            const eps = 1e-6;
+            const maxIter = 25;
+            for (let iter = 0; iter < maxIter; iter++) {
+                const r = correlationWithPointAt(idx, x, y);
+                const err = r - target;
+                if (Math.abs(err) < 1e-8) return [x, y];
+                const h = 1e-6 * (1 + Math.max(Math.abs(x), Math.abs(y)));
+                const rx = (correlationWithPointAt(idx, x + h, y) - r) / h;
+                const ry = (correlationWithPointAt(idx, x, y + h) - r) / h;
+                const g2 = rx * rx + ry * ry;
+                if (g2 < 1e-20) return [x, y];
+                const step = -err / g2;
+                const dx = step * rx, dy = step * ry;
+                let t = 1;
+                for (let b = 0; b < 12; b++) {
+                    const xn = x + t * dx, yn = y + t * dy;
+                    const rn = correlationWithPointAt(idx, xn, yn);
+                    if (Math.abs(rn - target) <= Math.abs(err)) { x = xn; y = yn; break; }
+                    t *= 0.5;
+                }
+            }
+            return [x, y];
+        }
+        
+        function buildPointsInSVG() {
+            const group = document.getElementById('pointsGroup');
+            group.innerHTML = '';
+            points.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('class', 'draggable-point');
+                circle.setAttribute('r', '6');
+                circle.setAttribute('fill', POINT_COLORS[index % POINT_COLORS.length]);
+                circle.setAttribute('stroke', '#fff');
+                circle.setAttribute('stroke-width', '2');
+                circle.setAttribute('data-index', index);
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#2c3e50');
+                label.setAttribute('font-weight', 'bold');
+                label.textContent = 'P' + (index + 1);
+                point.element = circle;
+                point.labelEl = label;
+                group.appendChild(circle);
+                group.appendChild(label);
+                updatePointPosition(index);
+                circle.addEventListener('mousedown', (e) => startDrag(e, index));
+                circle.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = document.getElementById('plotSvg').getBoundingClientRect();
+                    startDrag({ clientX: touch.clientX, clientY: touch.clientY }, index,
+                        touch.clientX - rect.left, touch.clientY - rect.top);
+                });
+            });
+        }
+        
+        function applyNumPoints() {
+            const n = Math.max(2, Math.min(15, parseInt(document.getElementById('numPointsInput').value, 10) || 3));
+            document.getElementById('numPointsInput').value = n;
+            createPointsOnDiagonal(n);
+            buildPointsInSVG();
+            selectedPointIndex = null;
+            drawContourLines();
+            updateCorrelationDisplay();
+            updatePointDisplay();
+        }
+        
+        function initInteractivePlot() {
+            drawAxesAndLattice();
+            const n = Math.max(2, Math.min(15, parseInt(document.getElementById('numPointsInput').value, 10) || 3));
+            createPointsOnDiagonal(n);
+            buildPointsInSVG();
+            document.addEventListener('mousemove', handleDrag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', (e) => { e.preventDefault(); handleDrag(e.touches[0]); });
+            document.addEventListener('touchend', endDrag);
+            updateCorrelationDisplay();
+            updatePointDisplay();
+        }
+        
+        function startDrag(e, index, svgX = null, svgY = null) {
+            draggingPoint = index;
+            selectedPointIndex = index;
+            drawContourLines();
+            const svg = document.getElementById('plotSvg');
+            const rect = svg.getBoundingClientRect();
+            if (svgX === null || svgY === null) {
+                svgX = e.clientX - rect.left;
+                svgY = e.clientY - rect.top;
+            }
+            const point = points[index];
+            dragOffset.x = svgX - dataToSvgX(point.x);
+            dragOffset.y = svgY - dataToSvgY(point.y);
+        }
+        
+        function handleDrag(e) {
+            if (draggingPoint === null) return;
+            const svg = document.getElementById('plotSvg');
+            const rect = svg.getBoundingClientRect();
+            const svgX = (e.clientX || e.touches?.[0]?.clientX || 0) - rect.left;
+            const svgY = (e.clientY || e.touches?.[0]?.clientY || 0) - rect.top;
+            let newX, newY;
+            const lockToContour = document.getElementById('lockToContourCheckbox').checked;
+            if (lockToContour && draggingPoint === selectedPointIndex && contourPolylines.length > 0) {
+                const onContour = closestPointOnContour(svgX, svgY);
+                if (onContour) {
+                    newX = roundToStep(onContour[0], 0.01);
+                    newY = roundToStep(onContour[1], 0.01);
+                } else {
+                    newX = svgToDataX(svgX - dragOffset.x);
+                    newY = svgToDataY(svgY - dragOffset.y);
+                    newX = roundToStep(newX, 0.01);
+                    newY = roundToStep(newY, 0.01);
+                    newX = Math.max(DATA_MIN, Math.min(DATA_MAX, newX));
+                    newY = Math.max(DATA_MIN, Math.min(DATA_MAX, newY));
+                }
+            } else {
+                newX = svgToDataX(svgX - dragOffset.x);
+                newY = svgToDataY(svgY - dragOffset.y);
+                newX = roundToStep(newX, 0.01);
+                newY = roundToStep(newY, 0.01);
+                newX = Math.max(DATA_MIN, Math.min(DATA_MAX, newX));
+                newY = Math.max(DATA_MIN, Math.min(DATA_MAX, newY));
+            }
+            points[draggingPoint].x = newX;
+            points[draggingPoint].y = newY;
+            updatePointPosition(draggingPoint);
+            updateCorrelationDisplay();
+            updatePointDisplay();
+            if (!lockToContour) drawContourLines();
+        }
+        
+        function endDrag() {
+            draggingPoint = null;
+        }
+        
+        function snapToDiagonal() {
+            points.forEach((point, index) => {
+                const avg = (point.x + point.y) / 2;
+                const snapped = roundToStep(avg, 0.01);
+                point.x = snapped;
+                point.y = snapped;
+                updatePointPosition(index);
+            });
+            updateCorrelationDisplay();
+            updatePointDisplay();
+            drawContourLines();
+        }
+        
+        function resetPoints() {
+            const n = points.length;
+            const span = POINT_MAX - POINT_MIN;
+            points.forEach((p, i) => {
+                const t = n === 1 ? 0 : POINT_MIN + (span * i) / (n - 1);
+                p.x = t;
+                p.y = t;
+                updatePointPosition(i);
+            });
+            selectedPointIndex = null;
+            updateCorrelationDisplay();
+            updatePointDisplay();
+            drawContourLines();
+        }
+        
+        function generateLinearData(correlation, n = 100) {
+            const data = [];
+            const x = [];
+            const y = [];
+            
+            // Generate x values (study hours 5-45)
+            for (let i = 0; i < n; i++) {
+                x.push(Math.random() * 40 + 5);
+            }
+            
+            // Generate y values based on correlation
+            for (let i = 0; i < n; i++) {
+                const baseSlope = 0.03;
+                const slope = correlation >= 0 ? baseSlope : -baseSlope;
+                const baseGPA = 1.5;
+                const trendY = baseGPA + slope * (x[i] - 25);
+                
+                let yValue;
+                
+                if (Math.abs(correlation) >= 0.99) {
+                    // Perfect correlation: no noise at all
+                    yValue = trendY;
+                } else {
+                    // Smooth transition based on correlation strength
+                    const maxNoise = 0.8;
+                    const noiseLevel = maxNoise * (1 - Math.abs(correlation));
+                    const noise = (Math.random() - 0.5) * noiseLevel;
+                    
+                    // For very low correlations, add more randomness
+                    const randomComponent = Math.random() * 3 + 0.5; // Random between 0.5 and 3.5
+                    const trendWeight = Math.abs(correlation);
+                    const randomWeight = 1 - trendWeight;
+                    
+                    yValue = (trendY + noise) * trendWeight + randomComponent * randomWeight;
+                }
+                
+                y.push(Math.max(0.5, Math.min(3.5, yValue)));
+            }
+            
+            return x.map((val, i) => ({ x: val, y: y[i] }));
+        }
+        
+        
+        function generateCategoricalData(correlation, n = 100) {
+            const categories = ['Low', 'Medium-Low', 'Medium', 'Medium-High', 'High'];
+            const categoryValues = [1, 2, 3, 4, 5];
+            const data = [];
+            
+            // Generate equal samples per category
+            const samplesPerCategory = Math.floor(n / categories.length);
+            
+            for (let i = 0; i < categories.length; i++) {
+                const category = categories[i];
+                const categoryValue = categoryValues[i];
+                
+                for (let j = 0; j < samplesPerCategory; j++) {
+                    let satisfaction;
+                    
+                    if (Math.abs(correlation) >= 0.99) {
+                        // Perfect correlation: no noise, clear progression
+                        if (correlation > 0) {
+                            // Perfect positive: Low=1, High=5
+                            satisfaction = categoryValue;
+                        } else {
+                            // Perfect negative: Low=5, High=1
+                            satisfaction = 6 - categoryValue;
+                        }
+                    } else {
+                        // Smooth transition based on correlation strength
+                        let baseSatisfaction = 3;
+                        
+                        // Adjust based on correlation
+                        if (correlation > 0) {
+                            // Positive correlation: higher income = higher satisfaction
+                            baseSatisfaction = 2 + (categoryValue - 1) * 0.8;
+                        } else if (correlation < 0) {
+                            // Negative correlation: higher income = lower satisfaction
+                            baseSatisfaction = 4 - (categoryValue - 1) * 0.8;
+                        }
+                        
+                        // Add noise
+                        const maxNoise = 1.5;
+                        const noiseLevel = maxNoise * (1 - Math.abs(correlation));
+                        const noise = (Math.random() - 0.5) * noiseLevel;
+                        
+                        // For very low correlations, add more randomness
+                        const randomComponent = Math.random() * 4 + 1; // Random between 1 and 5
+                        const trendWeight = Math.abs(correlation);
+                        const randomWeight = 1 - trendWeight;
+                        
+                        satisfaction = (baseSatisfaction + noise) * trendWeight + randomComponent * randomWeight;
+                    }
+                    
+                    satisfaction = Math.max(1, Math.min(5, satisfaction));
+                    
+                    data.push({
+                        x: categoryValue,
+                        y: satisfaction,
+                        category: category
+                    });
+                }
+            }
+            
+            return data;
+        }
+        
+        function calculateStats(data) {
+            const n = data.length;
+            const x = data.map(d => d.x);
+            const y = data.map(d => d.y);
+            
+            const xMean = x.reduce((sum, val) => sum + val, 0) / n;
+            const yMean = y.reduce((sum, val) => sum + val, 0) / n;
+            
+            const numerator = x.reduce((sum, xi, i) => sum + (xi - xMean) * (y[i] - yMean), 0);
+            const xVariance = x.reduce((sum, xi) => sum + Math.pow(xi - xMean, 2), 0) / n;
+            const yVariance = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0) / n;
+            
+            const correlation = numerator / Math.sqrt(xVariance * yVariance * n * n);
+            const rSquared = correlation * correlation;
+            
+            return { correlation, rSquared };
+        }
+        
+        function getCorrelationStrength(correlation) {
+            const abs = Math.abs(correlation);
+            if (abs >= 0.7) return { text: 'Strong', class: 'strength-strong' };
+            if (abs >= 0.5) return { text: 'Moderate', class: 'strength-moderate' };
+            if (abs >= 0.3) return { text: 'Weak', class: 'strength-weak' };
+            return { text: 'Very Weak', class: 'strength-weak' };
+        }
+        
+        function initLinearChart() {
+            const ctx = document.getElementById('linearChart').getContext('2d');
+            const data = generateLinearData(0.8);
+            
+            linearChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Study Hours vs GPA',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Study Hours per Week',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'GPA (0-4 scale)',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            min: 0.5,
+                            max: 3.5,
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Study Hours: ${context.parsed.x.toFixed(1)}, GPA: ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        
+        function initCategoricalChart() {
+            const ctx = document.getElementById('categoricalChart').getContext('2d');
+            const data = generateCategoricalData(0.6);
+            
+            // Group data by category for better visualization
+            const groupedData = {};
+            data.forEach(point => {
+                if (!groupedData[point.category]) {
+                    groupedData[point.category] = [];
+                }
+                groupedData[point.category].push(point);
+            });
+            
+            const datasets = Object.keys(groupedData).map((category, index) => {
+                const colors = [
+                    'rgba(231, 76, 60, 0.6)',
+                    'rgba(52, 152, 219, 0.6)',
+                    'rgba(46, 204, 113, 0.6)',
+                    'rgba(155, 89, 182, 0.6)',
+                    'rgba(241, 196, 15, 0.6)'
+                ];
+                return {
+                    label: category,
+                    data: groupedData[category],
+                    backgroundColor: colors[index % colors.length],
+                    borderColor: colors[index % colors.length].replace('0.6', '1'),
+                    borderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                };
+            });
+            
+            categoricalChart = new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Income Level',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            min: 0.5,
+                            max: 5.5,
+                            ticks: {
+                                callback: function(value) {
+                                    const labels = ['', 'Low', 'Medium-Low', 'Medium', 'Medium-High', 'High'];
+                                    return labels[value] || '';
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Satisfaction Score (1-5)',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            min: 1,
+                            max: 5,
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateLinearChart(correlation) {
+            const data = generateLinearData(correlation);
+            linearChart.data.datasets[0].data = data;
+            
+            const stats = calculateStats(data);
+            document.getElementById('linearR2').textContent = stats.rSquared.toFixed(3);
+            
+            const baseSlope = 0.03;
+            const actualSlope = correlation >= 0 ? baseSlope : -baseSlope;
+            document.getElementById('linearSlope').textContent = actualSlope.toFixed(3);
+            
+            const strength = getCorrelationStrength(correlation);
+            const strengthEl = document.getElementById('linearStrength');
+            strengthEl.textContent = `${strength.text} ${correlation >= 0 ? 'Positive' : 'Negative'}`;
+            strengthEl.className = `correlation-strength ${strength.class}`;
+            
+            linearChart.update();
+        }
+        
+        
+        function updateCategoricalChart(correlation) {
+            const data = generateCategoricalData(correlation);
+            
+            // Group data by category
+            const groupedData = {};
+            data.forEach(point => {
+                if (!groupedData[point.category]) {
+                    groupedData[point.category] = [];
+                }
+                groupedData[point.category].push(point);
+            });
+            
+            const datasets = Object.keys(groupedData).map((category, index) => {
+                const colors = [
+                    'rgba(231, 76, 60, 0.6)',
+                    'rgba(52, 152, 219, 0.6)',
+                    'rgba(46, 204, 113, 0.6)',
+                    'rgba(155, 89, 182, 0.6)',
+                    'rgba(241, 196, 15, 0.6)'
+                ];
+                return {
+                    label: category,
+                    data: groupedData[category],
+                    backgroundColor: colors[index % colors.length],
+                    borderColor: colors[index % colors.length].replace('0.6', '1'),
+                    borderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                };
+            });
+            
+            categoricalChart.data.datasets = datasets;
+            
+            const stats = calculateStats(data);
+            document.getElementById('categoricalR2').textContent = stats.rSquared.toFixed(3);
+            document.getElementById('categoricalEta2').textContent = stats.rSquared.toFixed(3);
+            
+            const strength = getCorrelationStrength(correlation);
+            const strengthEl = document.getElementById('categoricalStrength');
+            strengthEl.textContent = `${strength.text} ${correlation >= 0 ? 'Positive' : 'Negative'}`;
+            strengthEl.className = `correlation-strength ${strength.class}`;
+            
+            categoricalChart.update();
+        }
+        
+        // Initialize everything when page loads
+        window.addEventListener('load', function() {
+            initInteractivePlot();
+            initLinearChart();
+            initCategoricalChart();
+            
+            // Set up event listeners
+            document.getElementById('linearSlider').addEventListener('input', function() {
+                const correlation = parseFloat(this.value);
+                document.getElementById('linearValue').textContent = correlation.toFixed(2);
+                updateLinearChart(correlation);
+            });
+            
+            document.getElementById('categoricalSlider').addEventListener('input', function() {
+                const correlation = parseFloat(this.value);
+                document.getElementById('categoricalValue').textContent = correlation.toFixed(2);
+                updateCategoricalChart(correlation);
+            });
+        });
+    </script>
+</body>
+</html>

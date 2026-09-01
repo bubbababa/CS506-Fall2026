@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Regression error shapes — heteroskedasticity &amp; non-normality</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #5eb8ff;
+      --true-line: #7ee787;
+      --fit-line: #ffb86c;
+      --normal: #bd93f9;
+      --bad: #ff7b72;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #2a3548;
+      background: var(--panel);
+    }
+    h1 { margin: 0 0 0.35rem; font-size: 1.3rem; font-weight: 600; }
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 60rem;
+    }
+    main { padding: 1rem 1.5rem 2rem; max-width: 1120px; margin: 0 auto; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      align-items: flex-end;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    select {
+      background: #2d3d52;
+      color: var(--text);
+      border: 1px solid #3d4f68;
+      padding: 0.45rem 0.6rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      min-width: 280px;
+    }
+    input[type="range"] { width: 200px; }
+    .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    button {
+      background: #2d3d52;
+      color: var(--text);
+      border: 1px solid #3d4f68;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #35465c; }
+    button.primary {
+      background: #1e4d7a;
+      border-color: var(--accent);
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 1000px) {
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    @media (min-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+      padding: 0.75rem;
+    }
+    .card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      background: #121820;
+    }
+    .caption {
+      margin-top: 0.45rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .caption strong { color: #c8d4e0; }
+    footer.note {
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 56rem;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Error structure: heteroskedastic normals vs. non-Gaussian noise</h1>
+    <p class="lede">
+      Same mean model <strong>Y = β₀ + β₁X + ε</strong>, different <strong>ε</strong>. Switch scenarios to compare
+      a <strong>conditionally normal</strong> error whose variance grows with <em>X</em> (fan in residual plot; pooled
+      histogram need not look Gaussian) against <strong>homoskedastic</strong> but <strong>non-normal</strong> errors
+      (uniform, skewed χ²-type, heavy-tailed <em>t</em>₃).
+    </p>
+  </header>
+  <main>
+    <div class="controls">
+      <label>
+        Scenario
+        <select id="scenario">
+          <option value="hetero">Normal ε, variance increases with X (heteroskedastic)</option>
+          <option value="uniform">Uniform ε (symmetric, bounded, not normal)</option>
+          <option value="skew">Centered χ²-type skew (not normal)</option>
+          <option value="t3">Heavy-tailed Student t₃ (not normal)</option>
+        </select>
+      </label>
+      <label>
+        Sample size <em>n</em>
+        <span>
+          <input type="range" id="nSlider" min="80" max="1200" value="400" step="20" />
+          <span class="value" id="nVal">400</span>
+        </span>
+      </label>
+      <label id="strengthLabel">
+        Fan strength (σ ∝ 1 + this·X/10)
+        <span>
+          <input type="range" id="strengthSlider" min="0" max="100" value="65" />
+          <span class="value" id="strengthVal">1.30</span>
+        </span>
+      </label>
+      <label id="scaleLabel" class="hidden">
+        Noise scale (spread)
+        <span>
+          <input type="range" id="scaleSlider" min="10" max="100" value="45" />
+          <span class="value" id="scaleVal">0.45</span>
+        </span>
+      </label>
+      <button type="button" class="primary" id="resampleBtn">Resample</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Scatter &amp; OLS line</h2>
+        <canvas id="scatterCv" width="500" height="320"></canvas>
+        <p class="caption" id="capScatter"></p>
+      </div>
+      <div class="card">
+        <h2>Residuals vs. X</h2>
+        <canvas id="resvxCv" width="500" height="320"></canvas>
+        <p class="caption" id="capResvx"></p>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <h2>All OLS residuals (histogram)</h2>
+        <canvas id="histCv" width="340" height="260"></canvas>
+        <p class="caption" id="capHist"></p>
+      </div>
+      <div class="card" id="splitCard">
+        <h2>Low X vs. high X residuals</h2>
+        <canvas id="splitHistCv" width="340" height="260"></canvas>
+        <p class="caption" id="capSplit"></p>
+      </div>
+      <div class="card">
+        <h2>Normal Q–Q of residuals</h2>
+        <canvas id="qqCv" width="340" height="260"></canvas>
+        <p class="caption" id="capQq"></p>
+      </div>
+    </div>
+
+    <p class="note footer" id="footerNote"></p>
+  </main>
+
+  <script>
+(function () {
+  const B0 = 1.2;
+  const B1 = 0.55;
+
+  const scenarioEl = document.getElementById("scenario");
+  const nSlider = document.getElementById("nSlider");
+  const nVal = document.getElementById("nVal");
+  const strengthSlider = document.getElementById("strengthSlider");
+  const strengthVal = document.getElementById("strengthVal");
+  const strengthLabel = document.getElementById("strengthLabel");
+  const scaleSlider = document.getElementById("scaleSlider");
+  const scaleVal = document.getElementById("scaleVal");
+  const scaleLabel = document.getElementById("scaleLabel");
+  const resampleBtn = document.getElementById("resampleBtn");
+  const splitCard = document.getElementById("splitCard");
+
+  const scatterCv = document.getElementById("scatterCv");
+  const resvxCv = document.getElementById("resvxCv");
+  const histCv = document.getElementById("histCv");
+  const splitHistCv = document.getElementById("splitHistCv");
+  const qqCv = document.getElementById("qqCv");
+  const sctx = scatterCv.getContext("2d");
+  const rvctx = resvxCv.getContext("2d");
+  const hctx = histCv.getContext("2d");
+  const shctx = splitHistCv.getContext("2d");
+  const qctx = qqCv.getContext("2d");
+
+  const capScatter = document.getElementById("capScatter");
+  const capResvx = document.getElementById("capResvx");
+  const capHist = document.getElementById("capHist");
+  const capSplit = document.getElementById("capSplit");
+  const capQq = document.getElementById("capQq");
+  const footerNote = document.getElementById("footerNote");
+
+  let xs = [];
+  let ys = [];
+
+  function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function rchi2(df) {
+    let s = 0;
+    for (let i = 0; i < df; i++) {
+      const z = randn();
+      s += z * z;
+    }
+    return s;
+  }
+
+  function rt3() {
+    return randn() / Math.sqrt(rchi2(3) / 3);
+  }
+
+  function noiseHetero(x, base, fan) {
+    const sig = base * (1 + fan * (x / 10));
+    return sig * randn();
+  }
+
+  function noiseUniform(scale) {
+    return scale * (Math.random() * 2 - 1);
+  }
+
+  function noiseSkew(scale) {
+    const c = rchi2(4);
+    return ((c - 4) / Math.sqrt(8)) * scale;
+  }
+
+  function noiseT3(scale) {
+    return rt3() * scale;
+  }
+
+  function scaleFromSlider() {
+    return 0.15 + (+scaleSlider.value / 100) * 1.35;
+  }
+
+  function fanFromSlider() {
+    return (+strengthSlider.value / 100) * 2;
+  }
+
+  function scenario() {
+    return scenarioEl.value;
+  }
+
+  function generateData() {
+    const n = +nSlider.value;
+    const sc = scenario();
+    const base = scaleFromSlider();
+    const fan = fanFromSlider();
+    xs = new Array(n);
+    ys = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * 10;
+      xs[i] = x;
+      let e = 0;
+      if (sc === "hetero") e = noiseHetero(x, base, fan);
+      else if (sc === "uniform") e = noiseUniform(base * 1.2);
+      else if (sc === "skew") e = noiseSkew(base);
+      else if (sc === "t3") e = noiseT3(base * 0.55);
+      ys[i] = B0 + B1 * x + e;
+    }
+  }
+
+  function ols(x, y) {
+    const n = x.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) {
+      sx += x[i];
+      sy += y[i];
+      sxx += x[i] * x[i];
+      sxy += x[i] * y[i];
+    }
+    const denom = n * sxx - sx * sx;
+    const b1 = denom !== 0 ? (n * sxy - sx * sy) / denom : 0;
+    const b0 = (sy - b1 * sx) / n;
+    return { b0, b1 };
+  }
+
+  function residuals(b0, b1) {
+    const r = new Array(xs.length);
+    for (let i = 0; i < xs.length; i++) r[i] = ys[i] - (b0 + b1 * xs[i]);
+    return r;
+  }
+
+  function normalPdf(z, sigma) {
+    const inv = 1 / (sigma * Math.sqrt(2 * Math.PI));
+    return inv * Math.exp(-0.5 * (z * z) / (sigma * sigma));
+  }
+
+  function drawAxes(ctx, W, H, pad, xLabel, yLabel) {
+    ctx.strokeStyle = "#2a3548";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const t = pad.t + (i / 4) * (H - pad.t - pad.b);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, t);
+      ctx.lineTo(W - pad.r, t);
+      ctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const t = pad.l + (i / 4) * (W - pad.l - pad.r);
+      ctx.beginPath();
+      ctx.moveTo(t, pad.t);
+      ctx.lineTo(t, H - pad.b);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#5a6a80";
+    ctx.font = "10px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(xLabel, pad.l + (W - pad.l - pad.r) / 2, H - 6);
+    ctx.save();
+    ctx.translate(12, pad.t + (H - pad.t - pad.b) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+    ctx.strokeStyle = "#5a6a80";
+    ctx.strokeRect(pad.l, pad.t, W - pad.l - pad.r, H - pad.t - pad.b);
+  }
+
+  function drawScatter(b0, b1) {
+    const W = scatterCv.width;
+    const H = scatterCv.height;
+    const pad = { l: 44, r: 12, t: 14, b: 38 };
+    sctx.fillStyle = "#121820";
+    sctx.fillRect(0, 0, W, H);
+    const xMin = 0, xMax = 10;
+    let yMin = Infinity, yMax = -Infinity;
+    for (let i = 0; i < ys.length; i++) {
+      yMin = Math.min(yMin, ys[i]);
+      yMax = Math.max(yMax, ys[i]);
+    }
+    const yPad = (yMax - yMin) * 0.08 + 0.35;
+    yMin -= yPad;
+    yMax += yPad;
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * plotW;
+    const sy = (y) => pad.t + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+    drawAxes(sctx, W, H, pad, "X", "Y");
+    function lineSeg(b0l, b1l, color, dash) {
+      sctx.strokeStyle = color;
+      sctx.lineWidth = 2.2;
+      sctx.setLineDash(dash || []);
+      sctx.beginPath();
+      sctx.moveTo(sx(xMin), sy(b0l + b1l * xMin));
+      sctx.lineTo(sx(xMax), sy(b0l + b1l * xMax));
+      sctx.stroke();
+      sctx.setLineDash([]);
+    }
+    lineSeg(B0, B1, "#7ee787");
+    lineSeg(b0, b1, "#ffb86c", [5, 4]);
+    for (let i = 0; i < xs.length; i++) {
+      sctx.fillStyle = "rgba(94, 184, 255, 0.65)";
+      sctx.beginPath();
+      sctx.arc(sx(xs[i]), sy(ys[i]), 2.6, 0, Math.PI * 2);
+      sctx.fill();
+    }
+  }
+
+  function drawResVsX(res) {
+    const W = resvxCv.width;
+    const H = resvxCv.height;
+    const pad = { l: 44, r: 12, t: 14, b: 38 };
+    rvctx.fillStyle = "#121820";
+    rvctx.fillRect(0, 0, W, H);
+    const xMin = 0, xMax = 10;
+    let rMin = Infinity, rMax = -Infinity;
+    for (let i = 0; i < res.length; i++) {
+      rMin = Math.min(rMin, res[i]);
+      rMax = Math.max(rMax, res[i]);
+    }
+    const rPad = (rMax - rMin) * 0.12 + 0.2;
+    rMin -= rPad;
+    rMax += rPad;
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * plotW;
+    const sy = (r) => pad.t + plotH - ((r - rMin) / (rMax - rMin)) * plotH;
+    drawAxes(rvctx, W, H, pad, "X", "Residual");
+    rvctx.strokeStyle = "#5a6a80";
+    rvctx.setLineDash([4, 4]);
+    rvctx.beginPath();
+    rvctx.moveTo(pad.l, sy(0));
+    rvctx.lineTo(pad.l + plotW, sy(0));
+    rvctx.stroke();
+    rvctx.setLineDash([]);
+    for (let i = 0; i < xs.length; i++) {
+      const hue = 200 + (xs[i] / 10) * 80;
+      rvctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.55)`;
+      rvctx.beginPath();
+      rvctx.arc(sx(xs[i]), sy(res[i]), 2.5, 0, Math.PI * 2);
+      rvctx.fill();
+    }
+  }
+
+  function histogramWithNormal(ctx, canvas, res, sigmaOverlay) {
+    const W = canvas.width;
+    const H = canvas.height;
+    const pad = { l: 40, r: 10, t: 12, b: 34 };
+    ctx.fillStyle = "#121820";
+    ctx.fillRect(0, 0, W, H);
+    const n = res.length;
+    let rMin = Infinity, rMax = -Infinity;
+    for (let i = 0; i < n; i++) {
+      rMin = Math.min(rMin, res[i]);
+      rMax = Math.max(rMax, res[i]);
+    }
+    const ext = (rMax - rMin) * 0.05 + 0.15;
+    rMin -= ext;
+    rMax += ext;
+    const bins = Math.min(36, Math.max(14, Math.round(n / 30)));
+    const counts = new Array(bins).fill(0);
+    for (let i = 0; i < n; i++) {
+      const z = res[i];
+      const b = Math.floor(((z - rMin) / (rMax - rMin)) * bins);
+      counts[Math.min(bins - 1, Math.max(0, b))]++;
+    }
+    const maxC = Math.max(...counts, 1);
+    const binW = (rMax - rMin) / bins;
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+    const barW = (plotW / bins) * 0.82;
+    const gap = (plotW / bins) * 0.18;
+    drawAxes(ctx, W, H, pad, "Residual", "Count");
+    for (let b = 0; b < bins; b++) {
+      const h = (counts[b] / maxC) * plotH * 0.9;
+      const x0 = pad.l + (b / bins) * plotW + gap / 2;
+      const y0 = pad.t + plotH - h;
+      ctx.fillStyle = "rgba(255, 182, 108, 0.5)";
+      ctx.fillRect(x0, y0, barW, h);
+    }
+    if (sigmaOverlay > 0) {
+      ctx.strokeStyle = "#bd93f9";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      const steps = 100;
+      for (let s = 0; s <= steps; s++) {
+        const z = rMin + (s / steps) * (rMax - rMin);
+        const expected = n * binW * normalPdf(z, sigmaOverlay);
+        const barH = (expected / maxC) * plotH * 0.9;
+        const px = pad.l + ((z - rMin) / (rMax - rMin)) * plotW;
+        const py = pad.t + plotH - Math.min(plotH * 0.97, barH);
+        if (s === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function splitHistograms(res) {
+    const W = splitHistCv.width;
+    const H = splitHistCv.height;
+    shctx.fillStyle = "#121820";
+    shctx.fillRect(0, 0, W, H);
+    const low = [];
+    const high = [];
+    for (let i = 0; i < xs.length; i++) {
+      if (xs[i] < 5) low.push(res[i]);
+      else high.push(res[i]);
+    }
+    const base = scaleFromSlider();
+    const fan = fanFromSlider();
+    const sigLow = base * (1 + fan * 2.5 / 10);
+    const sigHigh = base * (1 + fan * 7.5 / 10);
+
+    function miniHist(x0, w, data, sigma, label) {
+      const pad = { l: 6, r: 6, t: 22, b: 8 };
+      const pw = w - pad.l - pad.r;
+      const ph = H - pad.t - pad.b;
+      if (data.length < 5) return;
+      let rMin = Infinity, rMax = -Infinity;
+      for (let i = 0; i < data.length; i++) {
+        rMin = Math.min(rMin, data[i]);
+        rMax = Math.max(rMax, data[i]);
+      }
+      const ext = (rMax - rMin) * 0.08 + 0.1;
+      rMin -= ext;
+      rMax += ext;
+      const bins = Math.max(10, Math.min(22, Math.round(data.length / 12)));
+      const counts = new Array(bins).fill(0);
+      for (let i = 0; i < data.length; i++) {
+        const z = data[i];
+        const b = Math.floor(((z - rMin) / (rMax - rMin)) * bins);
+        counts[Math.min(bins - 1, Math.max(0, b))]++;
+      }
+      const maxC = Math.max(...counts, 1);
+      const binW = (rMax - rMin) / bins;
+      const barW = (pw / bins) * 0.78;
+      const gap = (pw / bins) * 0.22;
+      shctx.fillStyle = "#5a6a80";
+      shctx.font = "10px system-ui";
+      shctx.textAlign = "center";
+      shctx.fillText(label, x0 + w / 2, 14);
+      for (let b = 0; b < bins; b++) {
+        const bh = (counts[b] / maxC) * ph * 0.88;
+        const bx = x0 + pad.l + (b / bins) * pw + gap / 2;
+        const by = pad.t + ph - bh;
+        shctx.fillStyle = "rgba(94, 184, 255, 0.45)";
+        shctx.fillRect(bx, by, barW, bh);
+      }
+      shctx.strokeStyle = "#bd93f9";
+      shctx.lineWidth = 1.4;
+      shctx.beginPath();
+      const steps = 60;
+      const nloc = data.length;
+      for (let s = 0; s <= steps; s++) {
+        const z = rMin + (s / steps) * (rMax - rMin);
+        const expected = nloc * binW * normalPdf(z, sigma);
+        const barH = (expected / maxC) * ph * 0.88;
+        const px = x0 + pad.l + ((z - rMin) / (rMax - rMin)) * pw;
+        const py = pad.t + ph - Math.min(ph * 0.95, barH);
+        if (s === 0) shctx.moveTo(px, py);
+        else shctx.lineTo(px, py);
+      }
+      shctx.stroke();
+      shctx.strokeStyle = "#3d4f68";
+      shctx.strokeRect(x0 + pad.l, pad.t, pw, ph);
+    }
+
+    const half = W / 2;
+    miniHist(0, half, low, sigLow, "X < 5");
+    miniHist(half, half, high, sigHigh, "X ≥ 5");
+  }
+
+  function drawQQ(res) {
+    const W = qqCv.width;
+    const H = qqCv.height;
+    const pad = { l: 40, r: 12, t: 12, b: 34 };
+    qctx.fillStyle = "#121820";
+    qctx.fillRect(0, 0, W, H);
+    const sorted = res.slice().sort((a, b) => a - b);
+    const n = sorted.length;
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+    const theoretical = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const p = (i + 0.5) / n;
+      theoretical[i] = normalQuantile(p);
+    }
+    let m = 0;
+    for (let i = 0; i < n; i++) m += sorted[i];
+    m /= n;
+    let v = 0;
+    for (let i = 0; i < n; i++) v += (sorted[i] - m) * (sorted[i] - m);
+    const sd = Math.sqrt(v / Math.max(1, n - 1));
+    let xmin = Infinity, xmax = -Infinity;
+    let ymin = Infinity, ymax = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const t = theoretical[i];
+      const y = sorted[i];
+      xmin = Math.min(xmin, t);
+      xmax = Math.max(xmax, t);
+      ymin = Math.min(ymin, y, sd * t);
+      ymax = Math.max(ymax, y, sd * t);
+    }
+    const padX = (xmax - xmin) * 0.05 || 0.2;
+    const padY = (ymax - ymin) * 0.06 || 0.2;
+    xmin -= padX;
+    xmax += padX;
+    ymin -= padY;
+    ymax += padY;
+    const sx = (t) => pad.l + ((t - xmin) / (xmax - xmin || 1)) * plotW;
+    const sy = (v) => pad.t + plotH - ((v - ymin) / (ymax - ymin || 1)) * plotH;
+    drawAxes(qctx, W, H, pad, "Normal quantiles", "Ordered residuals");
+    qctx.strokeStyle = "#3d4f68";
+    qctx.lineWidth = 1.5;
+    qctx.setLineDash([5, 4]);
+    qctx.beginPath();
+    qctx.moveTo(sx(xmin), sy(sd * xmin));
+    qctx.lineTo(sx(xmax), sy(sd * xmax));
+    qctx.stroke();
+    qctx.setLineDash([]);
+    const step = Math.max(1, Math.floor(n / 800));
+    for (let i = 0; i < n; i += step) {
+      qctx.fillStyle = "rgba(255, 123, 114, 0.55)";
+      qctx.beginPath();
+      qctx.arc(sx(theoretical[i]), sy(sorted[i]), 2.2, 0, Math.PI * 2);
+      qctx.fill();
+    }
+  }
+
+  function normalQuantile(p) {
+    if (p <= 0 || p >= 1) return 0;
+    const a = [
+      -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+      1.383577518672690e2, -3.066479806614716e1, 2.506628277459239,
+    ];
+    const b = [
+      -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+      6.680131188771972e1, -1.328068155288572e1,
+    ];
+    const c = [
+      -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
+      -2.549732539343734, 4.374664141464968, 2.938163982698783,
+    ];
+    const d = [7.784695709041462e-3, 3.224671290108398e-1, 2.445134137142996, 3.754408661907416];
+    const plow = 0.02425;
+    const phigh = 1 - plow;
+    let q, r;
+    if (p < plow) {
+      q = Math.sqrt(-2 * Math.log(p));
+      return (
+        (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+        ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+      );
+    }
+    if (phigh < p) {
+      q = Math.sqrt(-2 * Math.log(1 - p));
+      return (
+        -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+        ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+      );
+    }
+    q = p - 0.5;
+    r = q * q;
+    return (
+      (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+    );
+  }
+
+  function pooledResidualSD(res) {
+    const n = res.length;
+    let s = 0;
+    for (let i = 0; i < n; i++) s += res[i] * res[i];
+    return Math.sqrt(s / Math.max(1, n - 2));
+  }
+
+  function updateCaptions(sc, fan, base) {
+    if (sc === "hetero") {
+      capScatter.textContent =
+        "Each point is still Gaussian around the line, but σ(X) grows with X — a funnel in the residual plot.";
+      capResvx.textContent =
+        "Fan shape: conditional distributions are normal with different variances; OLS is still unbiased for β but inference can be wrong if you ignore heteroskedasticity.";
+      capHist.textContent =
+        "Pooling all residuals mixes many different normal shapes — the marginal histogram need not look like a single bell curve.";
+      capSplit.textContent =
+        "Splitting by X: each slice is closer to a single Gaussian (purple = N(0, σ(X)²) at the slice’s typical X).";
+      capQq.textContent =
+        "Q–Q often curves when variance is wrong or errors are non-Gaussian; here skew is mild but tails may depart.";
+      splitCard.style.display = "";
+      footerNote.textContent =
+        "Heteroskedasticity: ε | X ~ Normal with variance changing in X. Gauss–Markov can still give unbiased OLS, but standard errors assuming constant variance are generally invalid.";
+    } else if (sc === "uniform") {
+      capScatter.textContent =
+        "Bounded, flat-tailed noise: symmetric but not bell-shaped — uniform on an interval.";
+      capResvx.textContent =
+        "Residual spread is roughly constant in X (homoskedastic), unlike the fan scenario.";
+      capHist.textContent =
+        "Histogram is flat-topped; the purple N(0, RMSE) curve is a poor global fit (wrong tails and center).";
+      capSplit.textContent =
+        "Low vs high X still look uniform-ish when the error does not depend on X.";
+      capQq.textContent =
+        "Q–Q plot shows S-curve / flat middle: short tails vs normal (bounded support).";
+      splitCard.style.display = "";
+      footerNote.textContent =
+        "Uniform errors violate exact normality but OLS can still behave reasonably for β̂ with large n (different CLT for the estimator). Residual diagnostics should not look Gaussian.";
+    } else if (sc === "skew") {
+      capScatter.textContent =
+        "Errors are centered χ²-type (skewed, nonnegative-ish support on one side): same mean model, wrong normality.";
+      capResvx.textContent =
+        "No fan: variance does not need to change with X for this demo (homoskedastic skewed noise).";
+      capHist.textContent =
+        "Long right tail; purple curve uses RMSE as σ for a naive N(0,σ²) overlay — mismatch is obvious.";
+      capSplit.textContent =
+        "Both slices stay skewed when noise does not depend on X.";
+      capQq.textContent =
+        "Q–Q bends strongly: skew shows as systematic departure from the diagonal.";
+      splitCard.style.display = "";
+      footerNote.textContent =
+        "Skewed errors break symmetry assumed by many normal-theory intervals; consider robust SEs, transformations, or GLMs.";
+    } else {
+      capScatter.textContent =
+        "t₃ errors: heavy tails — more extreme residuals than a Gaussian would produce.";
+      capResvx.textContent =
+        "Spread looks fairly constant in X; outliers appear in both tails.";
+      capHist.textContent =
+        "Histogram has taller tails than the purple normal with σ = RMSE; extreme bins are more frequent.";
+      capSplit.textContent =
+        "Both X regions show heavy tails when noise is i.i.d. t₃.";
+      capQq.textContent =
+        "Q–Q: points bow away at both ends — fat tails vs normal.";
+      splitCard.style.display = "";
+      footerNote.textContent =
+        "Heavy tails inflate influence of outliers; least squares is not the most robust choice; robust regression or t errors in a hierarchical model are alternatives.";
+    }
+  }
+
+  function toggleControls() {
+    const sc = scenario();
+    const hetero = sc === "hetero";
+    strengthLabel.classList.toggle("hidden", !hetero);
+    scaleLabel.classList.toggle("hidden", hetero);
+    strengthVal.textContent = fanFromSlider().toFixed(2);
+    scaleVal.textContent = scaleFromSlider().toFixed(2);
+  }
+
+  function redraw() {
+    const sc = scenario();
+    toggleControls();
+    nVal.textContent = nSlider.value;
+    generateData();
+    const { b0, b1 } = ols(xs, ys);
+    const res = residuals(b0, b1);
+    const rmse = pooledResidualSD(res);
+    drawScatter(b0, b1);
+    drawResVsX(res);
+
+    let sigmaHist = rmse;
+    if (sc === "hetero") {
+      const b = scaleFromSlider();
+      const f = fanFromSlider();
+      sigmaHist = b * Math.sqrt(
+        (1 / xs.length) *
+          xs.reduce((acc, x) => {
+            const s = 1 + f * (x / 10);
+            return acc + s * s;
+          }, 0)
+      );
+    }
+    histogramWithNormal(hctx, histCv, res, sigmaHist);
+    if (sc === "hetero") splitHistograms(res);
+    else {
+      shctx.fillStyle = "#121820";
+      shctx.fillRect(0, 0, splitHistCv.width, splitHistCv.height);
+      shctx.fillStyle = "#5a6a80";
+      shctx.font = "11px system-ui";
+      shctx.textAlign = "center";
+      shctx.fillText(
+        "Split view is most informative for heteroskedastic normals.",
+        splitHistCv.width / 2,
+        splitHistCv.height / 2
+      );
+    }
+    drawQQ(res);
+    updateCaptions(sc, fanFromSlider(), scaleFromSlider());
+  }
+
+  scenarioEl.addEventListener("change", redraw);
+  nSlider.addEventListener("input", redraw);
+  strengthSlider.addEventListener("input", () => {
+    strengthVal.textContent = fanFromSlider().toFixed(2);
+    redraw();
+  });
+  scaleSlider.addEventListener("input", () => {
+    scaleVal.textContent = scaleFromSlider().toFixed(2);
+    redraw();
+  });
+  resampleBtn.addEventListener("click", redraw);
+
+  strengthVal.textContent = fanFromSlider().toFixed(2);
+  scaleVal.textContent = scaleFromSlider().toFixed(2);
+  redraw();
+})();
+  </script>
+</body>
+</html>

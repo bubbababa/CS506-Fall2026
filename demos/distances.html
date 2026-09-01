@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L1 vs L2 Distance Convergence Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+            max-width: 1000px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1em;
+        }
+        
+        input[type="range"] {
+            width: 300px;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .value-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4CAF50;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        #mainCanvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .explanation {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #2196F3;
+        }
+        
+        .explanation h3 {
+            color: #1976D2;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .explanation p {
+            margin-bottom: 12px;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .path-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .l1-color { background: #FF5722; }
+        .l2-color { background: #4CAF50; }
+        .histogram-color { background: #2196F3; }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            input[type="range"] {
+                width: 250px;
+            }
+            
+            .path-legend {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>L1 vs L2 Distance Convergence</h1>
+        <p class="subtitle">Why L1 distance stays constant while area difference converges to zero</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="widthSlider">Histogram Width</label>
+                <input type="range" id="widthSlider" min="0" max="100" step="1" value="100">
+                <div class="value-display" id="widthValue">1.000</div>
+            </div>
+        </div>
+        
+        <div class="path-legend">
+            <div class="legend-item">
+                <div class="legend-color l1-color"></div>
+                <span>L1 Path (Manhattan Distance)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color l2-color"></div>
+                <span>L2 Path (Euclidean Distance)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color histogram-color"></div>
+                <span>Histogram Approximation</span>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="mainCanvas" width="800" height="400"></canvas>
+        </div>
+        
+        <h2 style="text-align: center; color: #333; margin: 40px 0 20px 0;">Cantor Set: Length vs Cardinality Paradox</h2>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="cantorSlider">Cantor Set Step</label>
+                <input type="range" id="cantorSlider" min="0" max="20" step="1" value="0">
+                <div class="value-display" id="cantorValue">0</div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="cantorCanvas" width="800" height="300"></canvas>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-container">
+                <div class="chart-title">Length vs Cardinality Visualization</div>
+                <canvas id="paradoxCanvas" width="400" height="200"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Mathematical Insight</div>
+                <div style="padding: 20px; font-size: 14px; line-height: 1.6;">
+                    <p><strong>Length:</strong> Decreases from 1.0 to 0 as middle thirds are removed</p>
+                    <p><strong>Cardinality:</strong> Remains uncountably infinite (same as [0,1])</p>
+                    <p><strong>Paradox:</strong> Same set, different measures of "size"</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-value" id="l1Distance">2.0000</div>
+                <div class="metric-label">L1 Distance (Constant)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="l2Distance">1.4142</div>
+                <div class="metric-label">L2 Distance (Diagonal)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="l2StaircaseDistance">2.0000</div>
+                <div class="metric-label">L2 Distance (Staircase)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="l1Area">0.5000</div>
+                <div class="metric-label">L1 Area (Staircase)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="l2Area">0.5000</div>
+                <div class="metric-label">L2 Area (Triangle)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="histogramWidth">1.0000</div>
+                <div class="metric-label">Histogram Width</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="cantorLength">1.0000</div>
+                <div class="metric-label">Cantor Set Length</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="cantorCardinality">∞</div>
+                <div class="metric-label">Cantor Set Cardinality</div>
+            </div>
+        </div>
+        
+        <div class="explanation">
+            <h3>Why This Happens</h3>
+            <p><strong>L1 Distance (Manhattan):</strong> Always equals 2 because it's the Manhattan distance from (0,0) to (1,1), which is simply 1 + 1 = 2. This is constant regardless of how we approximate the path with histograms.</p>
+            <p><strong>L2 Distance (Diagonal):</strong> Always equals √2 ≈ 1.4142 because it's the straight-line distance from (0,0) to (1,1), which never changes.</p>
+            <p><strong>L2 Distance (Staircase):</strong> Always equals √2 because the staircase path length is constant. However, the staircase <span class="highlight">converges to the diagonal</span> in the L2 norm as histogram width approaches zero!</p>
+            <p><strong>Area Convergence:</strong> The L1 area (staircase approximation) <span class="highlight">converges to the L2 area</span> (0.5) as histogram width approaches zero.</p>
+            <p><strong>Cantor Set Paradox:</strong> The Cantor set shows the same principle - as we remove middle thirds, the length approaches 0, but the cardinality remains uncountably infinite (same as [0,1]).</p>
+            <p><strong>Key Insight:</strong> This demonstrates that different mathematical concepts (distance vs. area, length vs. cardinality) can behave completely independently, even when one converges to the other.</p>
+        </div>
+    </div>
+
+    <script>
+        class ConvergenceDemo {
+            constructor() {
+                this.canvas = document.getElementById('mainCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cantorCanvas = document.getElementById('cantorCanvas');
+                this.cantorCtx = this.cantorCanvas.getContext('2d');
+                this.paradoxCanvas = document.getElementById('paradoxCanvas');
+                this.paradoxCtx = this.paradoxCanvas.getContext('2d');
+                
+                this.widthSlider = document.getElementById('widthSlider');
+                this.widthValue = document.getElementById('widthValue');
+                this.cantorSlider = document.getElementById('cantorSlider');
+                this.cantorValue = document.getElementById('cantorValue');
+                
+                this.cantorStep = 0;
+                this.maxCantorSteps = 20;
+                
+                this.setupEventListeners();
+                this.animate();
+            }
+            
+            setupEventListeners() {
+                this.widthSlider.addEventListener('input', (e) => {
+                    const actualWidth = this.getHistogramWidth();
+                    this.widthValue.textContent = actualWidth.toFixed(3);
+                });
+                
+                this.cantorSlider.addEventListener('input', (e) => {
+                    this.cantorStep = parseInt(e.target.value);
+                    this.cantorValue.textContent = this.cantorStep;
+                });
+            }
+            
+            getHistogramWidth() {
+                // Convert slider value (0-100) to exponential scale (0.001 to 1.0)
+                const sliderValue = parseFloat(this.widthSlider.value);
+                const minWidth = 0.001;
+                const maxWidth = 1.0;
+                
+                // Exponential scale: slider 0 = 0.001, slider 100 = 1.0
+                const logMin = Math.log(minWidth);
+                const logMax = Math.log(maxWidth);
+                const logValue = logMin + (logMax - logMin) * (sliderValue / 100);
+                
+                return Math.exp(logValue);
+            }
+            
+            calculateHistogramData(width) {
+                // Use the histogram width directly from the slider
+                const nBins = Math.max(1, Math.floor(1.0 / width));
+                const actualWidth = 1.0 / nBins;
+                
+                const bins = [];
+                for (let i = 0; i < nBins; i++) {
+                    const x = i * actualWidth;
+                    const height = x; // y = x at leftmost point of bin
+                    bins.push({ x, width: actualWidth, height });
+                }
+                
+                return { bins, actualWidth };
+            }
+            
+            calculateL1Distance(bins) {
+                // L1 distance is always 2 - it's the Manhattan distance from (0,0) to (1,1)
+                // This is constant regardless of histogram width
+                return 2;
+            }
+            
+            calculateL2Distance() {
+                return Math.sqrt(2);
+            }
+            
+            calculateL2StaircaseDistance(bins) {
+                // L2 distance of the staircase path
+                // For a staircase with n steps, the path goes:
+                // (0,0) → (1/n,0) → (1/n,1/n) → (2/n,1/n) → (2/n,2/n) → ... → (1,1)
+                // The L2 distance is the sum of L2 distances of each step
+                const n = bins.length;
+                if (n === 0) return 0;
+                if (n === 1) return Math.sqrt(2); // Single step: (0,0) → (1,1)
+                
+                // Each step has L2 distance = √((1/n)² + (1/n)²) = √2/n
+                // Total L2 distance = n × √2/n = √2
+                // This is constant, but let's show the convergence in a different way
+                // We'll show the "smoothness" of the path as it approaches the diagonal
+                return Math.sqrt(2);
+            }
+            
+            calculateL1Area(bins) {
+                // L1 area: sum of all histogram rectangles
+                // Each rectangle has width * height, where height is the function value at the leftmost point
+                let totalArea = 0;
+                for (let bin of bins) {
+                    totalArea += bin.width * bin.height;
+                }
+                return totalArea;
+            }
+            
+            calculateL2Area() {
+                // L2 area: area under the line y = x from 0 to 1 (triangle)
+                return 0.5;
+            }
+            
+            calculateCantorLength(step) {
+                // Cantor set length decreases as we remove middle thirds
+                if (step === 0) return 1.0;
+                return Math.pow(2/3, step);
+            }
+            
+            calculateCantorCardinality(step) {
+                // Cantor set cardinality remains uncountably infinite
+                return Infinity;
+            }
+            
+            drawCantorSet(step) {
+                this.cantorCtx.clearRect(0, 0, this.cantorCanvas.width, this.cantorCanvas.height);
+                
+                const margin = 40;
+                const width = this.cantorCanvas.width - 2 * margin;
+                const height = this.cantorCanvas.height - 2 * margin;
+                const y = margin + height / 2;
+                const removedY = y + 40; // Position for removed intervals
+                
+                // Draw the Cantor set at the current step
+                this.cantorCtx.strokeStyle = '#FF5722';
+                
+                if (step === 0) {
+                    // Initial interval [0,1]
+                    this.cantorCtx.lineWidth = 6;
+                    this.cantorCtx.beginPath();
+                    this.cantorCtx.moveTo(margin, y);
+                    this.cantorCtx.lineTo(margin + width, y);
+                    this.cantorCtx.stroke();
+                } else {
+                    // Draw remaining intervals
+                    const intervals = this.getCantorIntervals(step);
+                    const lineWidth = Math.max(1, Math.min(6, 6 - step * 0.2));
+                    this.cantorCtx.lineWidth = lineWidth;
+                    
+                    for (let interval of intervals) {
+                        const x1 = margin + interval.start * width;
+                        const x2 = margin + interval.end * width;
+                        this.cantorCtx.beginPath();
+                        this.cantorCtx.moveTo(x1, y);
+                        this.cantorCtx.lineTo(x2, y);
+                        this.cantorCtx.stroke();
+                    }
+                }
+                
+                // Draw removed intervals as green horizontal bars
+                if (step > 0) {
+                    this.cantorCtx.fillStyle = '#4CAF50';
+                    this.cantorCtx.strokeStyle = '#2E7D32';
+                    this.cantorCtx.lineWidth = 2;
+                    
+                    const removedIntervals = this.getRemovedIntervals(step);
+                    for (let interval of removedIntervals) {
+                        const x1 = margin + interval.start * width;
+                        const x2 = margin + interval.end * width;
+                        const barHeight = Math.max(8, 20 - step);
+                        
+                        this.cantorCtx.fillRect(x1, removedY - barHeight/2, x2 - x1, barHeight);
+                        this.cantorCtx.strokeRect(x1, removedY - barHeight/2, x2 - x1, barHeight);
+                    }
+                }
+                
+                // Add labels
+                this.cantorCtx.fillStyle = '#333';
+                this.cantorCtx.font = '18px Arial';
+                this.cantorCtx.fillText(`Step ${step}`, margin, margin);
+                
+                const length = this.calculateCantorLength(step);
+                this.cantorCtx.fillText(`Length: ${length.toFixed(6)}`, margin, margin + 25);
+                this.cantorCtx.fillText(`Cardinality: ∞`, margin, margin + 50);
+                
+                // Add legend
+                this.cantorCtx.fillStyle = '#FF5722';
+                this.cantorCtx.fillRect(margin + width - 120, margin, 15, 3);
+                this.cantorCtx.fillStyle = '#333';
+                this.cantorCtx.font = '12px Arial';
+                this.cantorCtx.fillText('Remaining', margin + width - 100, margin + 8);
+                
+                this.cantorCtx.fillStyle = '#4CAF50';
+                this.cantorCtx.fillRect(margin + width - 120, margin + 15, 15, 8);
+                this.cantorCtx.fillStyle = '#333';
+                this.cantorCtx.fillText('Removed', margin + width - 100, margin + 23);
+                
+                
+                // Add axis labels
+                this.cantorCtx.fillStyle = '#666';
+                this.cantorCtx.font = '16px Arial';
+                this.cantorCtx.fillText('0', margin - 10, y + 5);
+                this.cantorCtx.fillText('1', margin + width - 10, y + 5);
+                
+                // Add step labels for key milestones
+                if (step >= 5) {
+                    this.cantorCtx.fillStyle = '#999';
+                    this.cantorCtx.font = '12px Arial';
+                    this.cantorCtx.fillText(`Intervals: ${Math.pow(2, step)}`, margin + width - 100, margin + 35);
+                    this.cantorCtx.fillText(`Length ratio: ${(length * 100).toFixed(2)}%`, margin + width - 100, margin + 50);
+                }
+            }
+            
+            getCantorIntervals(step) {
+                if (step === 0) return [{start: 0, end: 1}];
+                
+                const intervals = [];
+                const prevIntervals = this.getCantorIntervals(step - 1);
+                
+                for (let interval of prevIntervals) {
+                    const length = interval.end - interval.start;
+                    const third = length / 3;
+                    
+                    // Left third
+                    intervals.push({
+                        start: interval.start,
+                        end: interval.start + third
+                    });
+                    
+                    // Right third
+                    intervals.push({
+                        start: interval.end - third,
+                        end: interval.end
+                    });
+                }
+                
+                return intervals;
+            }
+            
+            getRemovedIntervals(step) {
+                if (step === 0) return [];
+                
+                const removedIntervals = [];
+                
+                // Calculate all removed intervals up to the current step
+                for (let s = 1; s <= step; s++) {
+                    const prevIntervals = this.getCantorIntervals(s - 1);
+                    
+                    for (let interval of prevIntervals) {
+                        const length = interval.end - interval.start;
+                        const third = length / 3;
+                        
+                        // Middle third (removed)
+                        removedIntervals.push({
+                            start: interval.start + third,
+                            end: interval.end - third
+                        });
+                    }
+                }
+                
+                return removedIntervals;
+            }
+            
+            drawParadoxVisualization() {
+                this.paradoxCtx.clearRect(0, 0, this.paradoxCanvas.width, this.paradoxCanvas.height);
+                
+                const margin = 20;
+                const width = this.paradoxCanvas.width - 2 * margin;
+                const height = this.paradoxCanvas.height - 2 * margin;
+                
+                // Draw L1 vs L2 comparison
+                this.paradoxCtx.strokeStyle = '#FF5722';
+                this.paradoxCtx.lineWidth = 3;
+                this.paradoxCtx.beginPath();
+                this.paradoxCtx.moveTo(margin, margin + height * 0.3);
+                this.paradoxCtx.lineTo(margin + width * 0.5, margin + height * 0.3);
+                this.paradoxCtx.lineTo(margin + width * 0.5, margin + height * 0.7);
+                this.paradoxCtx.lineTo(margin + width, margin + height * 0.7);
+                this.paradoxCtx.stroke();
+                
+                this.paradoxCtx.strokeStyle = '#4CAF50';
+                this.paradoxCtx.lineWidth = 3;
+                this.paradoxCtx.beginPath();
+                this.paradoxCtx.moveTo(margin, margin + height * 0.3);
+                this.paradoxCtx.lineTo(margin + width, margin + height * 0.7);
+                this.paradoxCtx.stroke();
+                
+                // Add labels
+                this.paradoxCtx.fillStyle = '#333';
+                this.paradoxCtx.font = '12px Arial';
+                this.paradoxCtx.fillText('L1 Path (Length = 2)', margin, margin + height * 0.25);
+                this.paradoxCtx.fillText('L2 Path (Length = √2)', margin, margin + height * 0.9);
+                
+                // Draw Cantor set representation
+                this.paradoxCtx.fillStyle = '#2196F3';
+                this.paradoxCtx.fillRect(margin, margin + height * 0.8, width, 5);
+                this.paradoxCtx.fillStyle = '#333';
+                this.paradoxCtx.font = '10px Arial';
+                this.paradoxCtx.fillText('Cantor Set: Length = 0, Cardinality = ∞', margin, margin + height * 0.95);
+            }
+            
+            draw() {
+                const width = this.getHistogramWidth();
+                const { bins, actualWidth } = this.calculateHistogramData(width);
+                
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Set up coordinate system
+                const margin = 40;
+                const plotWidth = this.canvas.width - 2 * margin;
+                const plotHeight = this.canvas.height - 2 * margin;
+                
+                // Draw axes
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(margin, margin + plotHeight);
+                this.ctx.lineTo(margin + plotWidth, margin + plotHeight);
+                this.ctx.moveTo(margin, margin);
+                this.ctx.lineTo(margin, margin + plotHeight);
+                this.ctx.stroke();
+                
+                // Draw grid
+                this.ctx.strokeStyle = '#ddd';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const x = margin + (i / 10) * plotWidth;
+                    const y = margin + (i / 10) * plotHeight;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, margin);
+                    this.ctx.lineTo(x, margin + plotHeight);
+                    this.ctx.stroke();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(margin, y);
+                    this.ctx.lineTo(margin + plotWidth, y);
+                    this.ctx.stroke();
+                }
+                
+                // Draw L2 path (diagonal line)
+                this.ctx.strokeStyle = '#4CAF50';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.moveTo(margin, margin + plotHeight);
+                this.ctx.lineTo(margin + plotWidth, margin);
+                this.ctx.stroke();
+                
+                // Draw L1 path (staircase)
+                this.ctx.strokeStyle = '#FF5722';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(margin, margin + plotHeight);
+                
+                for (let bin of bins) {
+                    const x1 = margin + bin.x * plotWidth;
+                    const x2 = margin + (bin.x + bin.width) * plotWidth;
+                    const y = margin + plotHeight - bin.height * plotHeight;
+                    
+                    this.ctx.lineTo(x1, y);
+                    this.ctx.lineTo(x2, y);
+                }
+                this.ctx.lineTo(margin + plotWidth, margin);
+                this.ctx.stroke();
+                
+                // Draw histogram bars (only below the line y = x)
+                this.ctx.fillStyle = 'rgba(33, 150, 243, 0.6)';
+                this.ctx.strokeStyle = '#2196F3';
+                this.ctx.lineWidth = 1;
+                
+                for (let bin of bins) {
+                    const x = margin + bin.x * plotWidth;
+                    const y = margin + plotHeight - bin.height * plotHeight;
+                    const rectWidth = bin.width * plotWidth;
+                    const rectHeight = bin.height * plotHeight;
+                    
+                    // Only draw the rectangle below the line y = x
+                    this.ctx.fillRect(x, y, rectWidth, rectHeight);
+                    this.ctx.strokeRect(x, y, rectWidth, rectHeight);
+                }
+                
+                // Draw area difference (shaded region between L1 staircase and L2 diagonal)
+                this.ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(margin, margin + plotHeight);
+                
+                for (let bin of bins) {
+                    const x1 = margin + bin.x * plotWidth;
+                    const x2 = margin + (bin.x + bin.width) * plotWidth;
+                    const y1 = margin + plotHeight - bin.height * plotHeight;
+                    const y2 = margin + plotHeight - (bin.x + bin.width) * plotHeight;
+                    
+                    this.ctx.lineTo(x1, y1);
+                    this.ctx.lineTo(x2, y1);
+                    this.ctx.lineTo(x2, y2);
+                }
+                this.ctx.lineTo(margin + plotWidth, margin);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Add labels
+                this.ctx.fillStyle = '#333';
+                this.ctx.font = '16px Arial';
+                this.ctx.fillText('x', margin + plotWidth - 10, margin + plotHeight + 25);
+                this.ctx.save();
+                this.ctx.translate(margin - 25, margin + plotHeight / 2);
+                this.ctx.rotate(-Math.PI / 2);
+                this.ctx.fillText('y', 0, 0);
+                this.ctx.restore();
+                
+                // Update metrics
+                const l1Dist = this.calculateL1Distance(bins);
+                const l2Dist = this.calculateL2Distance();
+                const l2StaircaseDist = this.calculateL2StaircaseDistance(bins);
+                const l1Area = this.calculateL1Area(bins);
+                const l2Area = this.calculateL2Area();
+                
+                document.getElementById('l1Distance').textContent = l1Dist.toFixed(4);
+                document.getElementById('l2Distance').textContent = l2Dist.toFixed(4);
+                document.getElementById('l2StaircaseDistance').textContent = l2StaircaseDist.toFixed(4);
+                document.getElementById('l1Area').textContent = l1Area.toFixed(4);
+                document.getElementById('l2Area').textContent = l2Area.toFixed(4);
+                document.getElementById('histogramWidth').textContent = actualWidth.toFixed(4);
+                
+                // Draw Cantor set and paradox visualization
+                this.drawCantorSet(this.cantorStep);
+                this.drawParadoxVisualization();
+                
+                // Update Cantor set metrics
+                const cantorLength = this.calculateCantorLength(this.cantorStep);
+                document.getElementById('cantorLength').textContent = cantorLength.toFixed(4);
+                document.getElementById('cantorCardinality').textContent = '∞';
+            }
+            
+            animate() {
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Initialize the demo
+        document.addEventListener('DOMContentLoaded', () => {
+            new ConvergenceDemo();
+        });
+    </script>
+</body>
+</html>

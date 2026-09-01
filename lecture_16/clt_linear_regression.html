@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLT & Linear Regression — Sum of Many Small Errors</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #5eb8ff;
+      --scatter: rgba(94, 184, 255, 0.65);
+      --true-line: #7ee787;
+      --fit-line: #ffb86c;
+      --hist: rgba(255, 182, 108, 0.55);
+      --normal: #bd93f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #2a3548;
+      background: var(--panel);
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 58rem;
+    }
+    main {
+      padding: 1rem 1.5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="range"] { width: 200px; }
+    .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    button {
+      background: #2d3d52;
+      color: var(--text);
+      border: 1px solid #3d4f68;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #35465c; }
+    button.primary {
+      background: #1e4d7a;
+      border-color: var(--accent);
+    }
+    button.primary:hover { background: #255a8f; }
+    .canvases {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 900px) {
+      .canvases { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+      padding: 0.75rem;
+    }
+    .card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      background: #121820;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 3px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .legend .true::before { background: var(--true-line); }
+    .legend .fit::before { background: var(--fit-line); }
+    .legend .norm::before {
+      width: 14px;
+      height: 0;
+      border-bottom: 2px dashed var(--normal);
+    }
+    footer.note {
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 52rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Central limit theorem from a linear regression angle</h1>
+    <p class="lede">
+      We simulate <strong>Y = β₀ + β₁X + ε</strong> where the error is a sum of <em>k</em> independent,
+      identically distributed small shocks (uniform on [−1, 1]), scaled so total variance stays ~1.
+      As <em>k</em> grows, the error distribution becomes nearly normal (CLT), so assuming normal residuals
+      in regression is natural when many unrelated influences add up.
+    </p>
+  </header>
+  <main>
+    <div class="controls">
+      <label>
+        Number of additive shocks <em>k</em>
+        <span><input type="range" id="kSlider" min="1" max="80" value="3" />
+        <span class="value" id="kVal">3</span></span>
+      </label>
+      <label>
+        Sample size <em>n</em>
+        <span><input type="range" id="nSlider" min="40" max="800" value="200" step="20" />
+        <span class="value" id="nVal">200</span></span>
+      </label>
+      <button type="button" class="primary" id="animBtn">Animate <em>k</em></button>
+      <button type="button" id="resampleBtn">Resample data</button>
+    </div>
+
+    <div class="canvases">
+      <div class="card">
+        <h2>Scatter &amp; least-squares line</h2>
+        <canvas id="scatterCv" width="520" height="360"></canvas>
+        <div class="legend">
+          <span class="true">True mean line β₀ + β₁X</span>
+          <span class="fit">OLS fitted line</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Standardized OLS residuals vs. N(0,1)</h2>
+        <canvas id="histCv" width="520" height="360"></canvas>
+        <div class="legend">
+          <span>Histogram of studentized residuals</span>
+          <span class="norm">Normal PDF (scaled)</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note footer">
+      Each shock is Uniform(−1, 1) with variance ⅓. We set
+      ε = (η₁ + … + η<sub>k</sub>) / √(k/3) so Var(ε) ≈ 1 for every <em>k</em> — only the <em>shape</em>
+      of the error changes as you add more terms. Studentized residuals adjust for leverage so the
+      comparison to a standard normal is fair across <em>n</em>.
+    </p>
+  </main>
+
+  <script>
+(function () {
+  const B0 = 1.2;
+  const B1 = 0.55;
+
+  const kSlider = document.getElementById("kSlider");
+  const nSlider = document.getElementById("nSlider");
+  const kVal = document.getElementById("kVal");
+  const nVal = document.getElementById("nVal");
+  const animBtn = document.getElementById("animBtn");
+  const resampleBtn = document.getElementById("resampleBtn");
+  const scatterCv = document.getElementById("scatterCv");
+  const histCv = document.getElementById("histCv");
+  const sctx = scatterCv.getContext("2d");
+  const hctx = histCv.getContext("2d");
+
+  let xs = [];
+  let ys = [];
+  let animId = null;
+  let animDir = 1;
+
+  function randU11() {
+    return Math.random() * 2 - 1;
+  }
+
+  /** Sum of k iid U(-1,1), scaled to variance ~1 */
+  function epsilon(k) {
+    let s = 0;
+    for (let j = 0; j < k; j++) s += randU11();
+    return s / Math.sqrt(k / 3);
+  }
+
+  function generateData(n, k) {
+    xs = new Array(n);
+    ys = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * 10;
+      xs[i] = x;
+      ys[i] = B0 + B1 * x + epsilon(k);
+    }
+  }
+
+  function ols(x, y) {
+    const n = x.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) {
+      sx += x[i];
+      sy += y[i];
+      sxx += x[i] * x[i];
+      sxy += x[i] * y[i];
+    }
+    const denom = n * sxx - sx * sx;
+    const b1 = denom !== 0 ? (n * sxy - sx * sy) / denom : 0;
+    const b0 = (sy - b1 * sx) / n;
+    return { b0, b1 };
+  }
+
+  function mean(arr) {
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+  }
+
+  /** Studentized residuals (externally studentized omit-one would be heavier; use standardized for clarity) */
+  function residualsStudentized(x, y, b0, b1) {
+    const n = x.length;
+    const res = new Array(n);
+    let sse = 0;
+    for (let i = 0; i < n; i++) {
+      const fit = b0 + b1 * x[i];
+      res[i] = y[i] - fit;
+      sse += res[i] * res[i];
+    }
+    const sigma = Math.sqrt(sse / Math.max(1, n - 2));
+    const xbar = mean(x);
+    let sxx = 0;
+    for (let i = 0; i < n; i++) sxx += (x[i] - xbar) * (x[i] - xbar);
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const h = 1 / n + (x[i] - xbar) * (x[i] - xbar) / (sxx || 1);
+      const se = sigma * Math.sqrt(Math.max(1e-12, 1 - h));
+      out[i] = res[i] / se;
+    }
+    return out;
+  }
+
+  function normalPdf(z) {
+    return Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  }
+
+  function drawScatter() {
+    const W = scatterCv.width;
+    const H = scatterCv.height;
+    const pad = { l: 48, r: 16, t: 16, b: 44 };
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+
+    sctx.fillStyle = "#121820";
+    sctx.fillRect(0, 0, W, H);
+
+    const xMin = 0, xMax = 10;
+    let yMin = Infinity, yMax = -Infinity;
+    for (let i = 0; i < ys.length; i++) {
+      yMin = Math.min(yMin, ys[i]);
+      yMax = Math.max(yMax, ys[i]);
+    }
+    const yPad = (yMax - yMin) * 0.12 + 0.3;
+    yMin -= yPad;
+    yMax += yPad;
+
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * plotW;
+    const sy = (y) => pad.t + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+    const { b0, b1 } = ols(xs, ys);
+
+    sctx.strokeStyle = "#2a3548";
+    sctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const x = xMin + (i / 5) * (xMax - xMin);
+      const px = sx(x);
+      sctx.beginPath();
+      sctx.moveTo(px, pad.t);
+      sctx.lineTo(px, pad.t + plotH);
+      sctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const y = yMin + (i / 4) * (yMax - yMin);
+      const py = sy(y);
+      sctx.beginPath();
+      sctx.moveTo(pad.l, py);
+      sctx.lineTo(pad.l + plotW, py);
+      sctx.stroke();
+    }
+
+    sctx.fillStyle = "#5a6a80";
+    sctx.font = "11px system-ui";
+    sctx.textAlign = "center";
+    sctx.fillText("X", pad.l + plotW / 2, H - 10);
+    sctx.save();
+    sctx.translate(14, pad.t + plotH / 2);
+    sctx.rotate(-Math.PI / 2);
+    sctx.fillText("Y", 0, 0);
+    sctx.restore();
+
+    function lineSegment(b0l, b1l, color, width, dash) {
+      sctx.strokeStyle = color;
+      sctx.lineWidth = width;
+      sctx.setLineDash(dash || []);
+      sctx.beginPath();
+      sctx.moveTo(sx(xMin), sy(b0l + b1l * xMin));
+      sctx.lineTo(sx(xMax), sy(b0l + b1l * xMax));
+      sctx.stroke();
+      sctx.setLineDash([]);
+    }
+
+    lineSegment(B0, B1, "#7ee787", 2.5);
+    lineSegment(b0, b1, "#ffb86c", 2, [6, 4]);
+
+    for (let i = 0; i < xs.length; i++) {
+      sctx.fillStyle = "rgba(94, 184, 255, 0.7)";
+      sctx.beginPath();
+      sctx.arc(sx(xs[i]), sy(ys[i]), 3.2, 0, Math.PI * 2);
+      sctx.fill();
+    }
+
+    sctx.strokeStyle = "#5a6a80";
+    sctx.strokeRect(pad.l, pad.t, plotW, plotH);
+  }
+
+  function drawHist(studentized) {
+    const W = histCv.width;
+    const H = histCv.height;
+    const pad = { l: 48, r: 16, t: 16, b: 44 };
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+
+    hctx.fillStyle = "#121820";
+    hctx.fillRect(0, 0, W, H);
+
+    const bins = 28;
+    let zMin = -4, zMax = 4;
+    const counts = new Array(bins).fill(0);
+    for (let i = 0; i < studentized.length; i++) {
+      const z = studentized[i];
+      if (z < zMin || z > zMax) continue;
+      const b = Math.floor(((z - zMin) / (zMax - zMin)) * bins);
+      const idx = Math.min(bins - 1, Math.max(0, b));
+      counts[idx]++;
+    }
+    const maxC = Math.max(...counts, 1);
+    const binW = (zMax - zMin) / bins;
+    const barW = (plotW / bins) * 0.85;
+    const gap = (plotW / bins) * 0.15;
+
+    hctx.strokeStyle = "#2a3548";
+    hctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const z = zMin + (i / 4) * (zMax - zMin);
+      const px = pad.l + ((z - zMin) / (zMax - zMin)) * plotW;
+      hctx.beginPath();
+      hctx.moveTo(px, pad.t);
+      hctx.lineTo(px, pad.t + plotH);
+      hctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const py = pad.t + (i / 4) * plotH;
+      hctx.beginPath();
+      hctx.moveTo(pad.l, py);
+      hctx.lineTo(pad.l + plotW, py);
+      hctx.stroke();
+    }
+
+    const n = studentized.length;
+    for (let b = 0; b < bins; b++) {
+      const h = (counts[b] / maxC) * plotH * 0.92;
+      const x0 = pad.l + (b / bins) * plotW + gap / 2;
+      const y0 = pad.t + plotH - h;
+      hctx.fillStyle = "rgba(255, 182, 108, 0.55)";
+      hctx.fillRect(x0, y0, barW, h);
+    }
+
+    hctx.strokeStyle = "#bd93f9";
+    hctx.lineWidth = 2;
+    hctx.beginPath();
+    const steps = 120;
+    for (let s = 0; s <= steps; s++) {
+      const z = zMin + (s / steps) * (zMax - zMin);
+      const expectedCount = n * binW * normalPdf(z);
+      const barH = (expectedCount / maxC) * plotH * 0.92;
+      const px = pad.l + ((z - zMin) / (zMax - zMin)) * plotW;
+      const py = pad.t + plotH - Math.min(plotH * 0.98, barH);
+      if (s === 0) hctx.moveTo(px, py);
+      else hctx.lineTo(px, py);
+    }
+    hctx.stroke();
+
+    hctx.fillStyle = "#5a6a80";
+    hctx.font = "11px system-ui";
+    hctx.textAlign = "center";
+    hctx.fillText("Studentized residual", pad.l + plotW / 2, H - 10);
+    hctx.save();
+    hctx.translate(14, pad.t + plotH / 2);
+    hctx.rotate(-Math.PI / 2);
+    hctx.fillText("Count (scaled)", 0, 0);
+    hctx.restore();
+
+    hctx.strokeStyle = "#5a6a80";
+    hctx.strokeRect(pad.l, pad.t, plotW, plotH);
+  }
+
+  function redraw() {
+    const k = +kSlider.value;
+    const n = +nSlider.value;
+    generateData(n, k);
+    const { b0, b1 } = ols(xs, ys);
+    const stud = residualsStudentized(xs, ys, b0, b1);
+    drawScatter();
+    drawHist(stud);
+  }
+
+  function onKChange() {
+    kVal.textContent = kSlider.value;
+    if (!animId) redraw();
+  }
+
+  function onNChange() {
+    nVal.textContent = nSlider.value;
+    if (!animId) redraw();
+  }
+
+  kSlider.addEventListener("input", onKChange);
+  nSlider.addEventListener("input", onNChange);
+  resampleBtn.addEventListener("click", () => {
+    redraw();
+  });
+
+  animBtn.addEventListener("click", () => {
+    if (animId) {
+      clearInterval(animId);
+      animId = null;
+      animBtn.textContent = "Animate k";
+      redraw();
+      return;
+    }
+    animBtn.textContent = "Stop animation";
+    let k = +kSlider.value;
+    animDir = 1;
+    animId = setInterval(() => {
+      k += animDir;
+      if (k >= 80) animDir = -1;
+      if (k <= 1) animDir = 1;
+      kSlider.value = String(k);
+      kVal.textContent = String(k);
+      const n = +nSlider.value;
+      generateData(n, k);
+      const { b0, b1 } = ols(xs, ys);
+      const stud = residualsStudentized(xs, ys, b0, b1);
+      drawScatter();
+      drawHist(stud);
+    }, 90);
+  });
+
+  kVal.textContent = kSlider.value;
+  nVal.textContent = nSlider.value;
+  redraw();
+})();
+  </script>
+</body>
+</html>

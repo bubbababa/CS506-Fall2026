@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Dice Cheating Detector - A Statistical Adventure</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #e8e8e8;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .header h1 {
+            color: #ffd700;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            color: #e8e8e8;
+        }
+
+        .story-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid #ff6b6b;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .story-section h2 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .control-group input, .control-group select {
+            padding: 8px 12px;
+            border: 2px solid #ffd700;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #e8e8e8;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .dice-container {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .dice {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(145deg, #ffd700, #ffed4e);
+            border: 3px solid #ff6b6b;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a1a2e;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            animation: roll 0.6s ease-in-out;
+        }
+
+        @keyframes roll {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .dice.rolling {
+            animation: roll 0.6s ease-in-out infinite;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stats-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #e8e8e8;
+        }
+
+        .explanation {
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-style: italic;
+        }
+
+        .explanation h4 {
+            color: #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .cheating-result {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff0000;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .cheating-result h3 {
+            color: #ff0000;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .probability {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin: 10px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+
+        .step.completed {
+            background: #4caf50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎲 D&D Dice Cheating Detector 🎲</h1>
+            <p>A Statistical Adventure in Probability and Detection</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+            <div class="step" id="step4">4</div>
+        </div>
+
+        <!-- Step 1: Understanding Fair Dice -->
+        <div class="story-section" id="section1">
+            <h2>Step 1: The Suspicion Begins</h2>
+            <p>Your D&D group suspects that one of your friends might be using a loaded die! But first, you need to understand what a fair d20 should behave like. Let's roll some dice and see the distribution of results.</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="numRolls">Number of Rolls:</label>
+                    <input type="number" id="numRolls" value="100" min="10" max="1000">
+                </div>
+                <div class="control-group">
+                    <label for="numDice">Number of Dice:</label>
+                    <input type="number" id="numDice" value="5" min="1" max="20">
+                </div>
+                <button class="btn" onclick="rollDice()">Roll the Dice!</button>
+            </div>
+
+            <div class="dice-container" id="diceContainer"></div>
+            
+            <div class="chart-container">
+                <canvas id="distributionChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="explanation">
+                <h4>What We're Learning:</h4>
+                <p>Each number (1-20) should appear roughly 5% of the time with a fair die. The more rolls we do, the closer we get to this uniform distribution.</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="proceedToStep2()" id="proceedToStep2" style="display: none;">Continue to Step 2 →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Individual Die Distributions -->
+        <div class="story-section hidden" id="section2">
+            <h2>Step 2: Individual Die Distributions</h2>
+            <p>Now let's look at each die individually. Each die should show a roughly uniform distribution, but let's see how they vary from each other.</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="dieToShow">Select Die to View:</label>
+                    <select id="dieToShow" onchange="showDieDistribution()">
+                        <option value="0">Die 1</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="individualDieChart" width="400" height="200"></canvas>
+            </div>
+            
+            <div class="stats-display" id="averageStats"></div>
+            
+            <div class="chart-container">
+                <canvas id="averageChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="explanation">
+                <h4>Why This Works:</h4>
+                <p>The expected value of a fair d20 is (1+2+...+20)/20 = 10.5. If a die is loaded to favor higher numbers, the average will be higher than 10.5. If loaded for lower numbers, it'll be lower.</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="proceedToStep3()" id="proceedToStep3" style="display: none;">Continue to Step 3 →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Empirical Cheating Detection -->
+        <div class="story-section hidden" id="section3">
+            <h2>Step 3: Empirical Detection - Let's Simulate!</h2>
+            <p>Now let's test your friend's suspicious die empirically! We'll simulate many fair dice with the same number of rolls and see how many get an average as extreme as your friend's die.</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="suspiciousAverageEmpirical">Suspicious Die Average:</label>
+                    <input type="number" id="suspiciousAverageEmpirical" value="12.0" step="0.1" min="1" max="20">
+                </div>
+                <div class="control-group">
+                    <label for="suspiciousRollsEmpirical">Number of Rolls:</label>
+                    <input type="number" id="suspiciousRollsEmpirical" value="50" min="5" max="500">
+                </div>
+                <div class="control-group">
+                    <label for="numSimulations">Number of Simulated Dice:</label>
+                    <input type="number" id="numSimulations" value="1000" min="100" max="10000">
+                </div>
+                <button class="btn" onclick="empiricalDetection()">Simulate and Count!</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="empiricalChart" width="400" height="200"></canvas>
+            </div>
+            
+            <div class="cheating-result" id="empiricalResult"></div>
+
+            <div class="explanation">
+                <h4>Empirical Approach:</h4>
+                <p>We simulate many fair dice and count how many have averages as extreme as your friend's die. This gives us an empirical probability without needing complex math!</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="proceedToStep4()" id="proceedToStep4" style="display: none;">Continue to Step 4 →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Theoretical Cheating Detection -->
+        <div class="story-section hidden" id="section4">
+            <h2>Step 4: Theoretical Detection - The Math Way!</h2>
+            <p>Now let's do the same test using the Central Limit Theorem! We'll calculate the exact probability mathematically instead of simulating.</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="suspiciousAverage">Suspicious Die Average:</label>
+                    <input type="number" id="suspiciousAverage" value="12.0" step="0.1" min="1" max="20">
+                </div>
+                <div class="control-group">
+                    <label for="suspiciousRolls">Number of Rolls:</label>
+                    <input type="number" id="suspiciousRolls" value="50" min="5" max="500">
+                </div>
+                <button class="btn" onclick="theoreticalDetection()">Calculate Probability!</button>
+            </div>
+            
+            <div class="explanation">
+                <h4>Using the Central Limit Theorem:</h4>
+                <p>We know that dice averages follow a normal distribution with mean 10.5 and standard error <span id="stdErrorDisplay">0.00</span>. We'll calculate the exact probability of getting your friend's average or something more extreme.</p>
+            </div>
+
+            <div class="cheating-result" id="cheatingResult"></div>
+
+            <div class="chart-container">
+                <canvas id="detectionChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="explanation">
+                <h4>Statistical Significance:</h4>
+                <p>We calculate the probability of getting this average (or more extreme) from a fair die. If this probability is very low (like less than 5%), we can be confident the die is loaded!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let distributionChart, individualDieChart, averageChart, empiricalChart, detectionChart;
+        let currentStep = 1;
+        let diceData = [];
+        let averageData = [];
+        let empiricalData = [];
+        let allDiceRolls = []; // Store all individual dice rolls for Step 2
+        let allDiceAverages = []; // Store all dice averages for Step 3
+
+        // Initialize charts
+        function initCharts() {
+            // Distribution Chart
+            const ctx1 = document.getElementById('distributionChart').getContext('2d');
+            distributionChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 20}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: Array(20).fill(0),
+                        backgroundColor: 'rgba(255, 107, 107, 0.7)',
+                        borderColor: 'rgba(255, 107, 107, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Die Face'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribution of Die Rolls'
+                        }
+                    }
+                }
+            });
+
+            // Individual Die Chart
+            const ctx2 = document.getElementById('individualDieChart').getContext('2d');
+            individualDieChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 20}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: Array(20).fill(0),
+                        backgroundColor: 'rgba(0, 255, 255, 0.7)',
+                        borderColor: 'rgba(0, 255, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Die Face'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Individual Die Distribution'
+                        }
+                    }
+                }
+            });
+
+            // Average Chart
+            const ctx3 = document.getElementById('averageChart').getContext('2d');
+            averageChart = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Average',
+                        data: [],
+                        backgroundColor: 'rgba(255, 215, 0, 0.7)',
+                        borderColor: 'rgba(255, 215, 0, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 20,
+                            title: {
+                                display: true,
+                                text: 'Average Value'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Die Number'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Average of Each Die'
+                        }
+                    }
+                }
+            });
+
+            // Empirical Chart
+            const ctx4 = document.getElementById('empiricalChart').getContext('2d');
+            empiricalChart = new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Frequency',
+                        data: [],
+                        backgroundColor: 'rgba(0, 255, 255, 0.7)',
+                        borderColor: 'rgba(0, 255, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Average Value'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribution of Simulated Dice Averages'
+                        }
+                    }
+                }
+            });
+
+            // Detection Chart
+            const ctx5 = document.getElementById('detectionChart').getContext('2d');
+            detectionChart = new Chart(ctx5, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Normal Distribution',
+                        data: [],
+                        borderColor: 'rgba(0, 255, 255, 1)',
+                        backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Suspicious Average',
+                        data: [],
+                        borderColor: 'rgba(255, 0, 0, 1)',
+                        backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Probability Density'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Average Value'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Cheating Detection Analysis'
+                        }
+                    }
+                }
+            });
+        }
+
+        function rollDice() {
+            const numRolls = parseInt(document.getElementById('numRolls').value);
+            const numDice = parseInt(document.getElementById('numDice').value);
+            
+            // Clear previous data
+            diceData = [];
+            allDiceRolls = [];
+            const frequencies = Array(20).fill(0);
+            
+            // Roll dice
+            for (let i = 0; i < numDice; i++) {
+                const rolls = [];
+                for (let j = 0; j < numRolls; j++) {
+                    const roll = Math.floor(Math.random() * 20) + 1;
+                    rolls.push(roll);
+                    allDiceRolls.push(roll); // Store all rolls for Step 2
+                    frequencies[roll - 1]++;
+                }
+                diceData.push(rolls);
+            }
+            
+            // Update chart
+            distributionChart.data.datasets[0].data = frequencies;
+            distributionChart.update();
+            
+            // Show dice
+            displayDice(diceData[0].slice(-10)); // Show last 10 rolls of first die
+            
+            // Show continue button
+            document.getElementById('proceedToStep2').style.display = 'inline-block';
+        }
+
+        function displayDice(rolls) {
+            const container = document.getElementById('diceContainer');
+            container.innerHTML = '';
+            
+            rolls.forEach(roll => {
+                const dice = document.createElement('div');
+                dice.className = 'dice rolling';
+                dice.textContent = roll;
+                container.appendChild(dice);
+                
+                setTimeout(() => {
+                    dice.classList.remove('rolling');
+                }, 600);
+            });
+        }
+
+        function calculateAverages() {
+            const averages = diceData.map(rolls => {
+                return rolls.reduce((sum, roll) => sum + roll, 0) / rolls.length;
+            });
+            
+            averageData = averages;
+            allDiceAverages = [...averages]; // Store for Step 3
+            
+            // Update die selector
+            const dieSelector = document.getElementById('dieToShow');
+            dieSelector.innerHTML = '';
+            diceData.forEach((_, i) => {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Die ${i + 1}`;
+                dieSelector.appendChild(option);
+            });
+            
+            // Show first die distribution
+            showDieDistribution();
+            
+            // Update average chart
+            averageChart.data.labels = averages.map((_, i) => `Die ${i + 1}`);
+            averageChart.data.datasets[0].data = averages;
+            averageChart.update();
+            
+            // Display stats
+            const statsContainer = document.getElementById('averageStats');
+            statsContainer.innerHTML = '';
+            
+            averages.forEach((avg, i) => {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <h3>Die ${i + 1}</h3>
+                    <div class="stat-value">${avg.toFixed(2)}</div>
+                `;
+                statsContainer.appendChild(statCard);
+            });
+            
+            const overallAvg = averages.reduce((sum, avg) => sum + avg, 0) / averages.length;
+            const statCard = document.createElement('div');
+            statCard.className = 'stat-card';
+            statCard.innerHTML = `
+                <h3>Overall Average</h3>
+                <div class="stat-value">${overallAvg.toFixed(2)}</div>
+            `;
+            statsContainer.appendChild(statCard);
+            
+            // Show continue button
+            document.getElementById('proceedToStep3').style.display = 'inline-block';
+        }
+
+        function showDieDistribution() {
+            const dieIndex = parseInt(document.getElementById('dieToShow').value);
+            const rolls = diceData[dieIndex];
+            
+            // Calculate frequencies
+            const frequencies = Array(20).fill(0);
+            rolls.forEach(roll => {
+                frequencies[roll - 1]++;
+            });
+            
+            // Update individual die chart
+            individualDieChart.data.datasets[0].data = frequencies;
+            individualDieChart.update();
+        }
+
+        function empiricalDetection() {
+            const suspiciousAvg = parseFloat(document.getElementById('suspiciousAverageEmpirical').value);
+            const numRolls = parseInt(document.getElementById('suspiciousRollsEmpirical').value);
+            const numSimulations = parseInt(document.getElementById('numSimulations').value);
+            
+            // Simulate many fair dice
+            const averages = [];
+            let extremeCount = 0;
+            
+            for (let i = 0; i < numSimulations; i++) {
+                let sum = 0;
+                for (let j = 0; j < numRolls; j++) {
+                    sum += Math.floor(Math.random() * 20) + 1;
+                }
+                const avg = sum / numRolls;
+                averages.push(avg);
+                
+                // Count how many are as extreme or more extreme than suspicious average
+                const distanceFromExpected = Math.abs(avg - 10.5);
+                const suspiciousDistance = Math.abs(suspiciousAvg - 10.5);
+                if (distanceFromExpected >= suspiciousDistance) {
+                    extremeCount++;
+                }
+            }
+            
+            empiricalData = averages;
+            
+            // Create histogram
+            const bins = 20;
+            const min = Math.min(...averages);
+            const max = Math.max(...averages);
+            const binWidth = (max - min) / bins;
+            
+            const histogram = Array(bins).fill(0);
+            const binLabels = [];
+            
+            for (let i = 0; i < bins; i++) {
+                binLabels.push((min + i * binWidth).toFixed(1));
+            }
+            
+            averages.forEach(avg => {
+                const binIndex = Math.min(Math.floor((avg - min) / binWidth), bins - 1);
+                histogram[binIndex]++;
+            });
+            
+            // Update chart
+            empiricalChart.data.labels = binLabels;
+            empiricalChart.data.datasets[0].data = histogram;
+            empiricalChart.update();
+            
+            // Calculate empirical probability
+            const empiricalProbability = extremeCount / numSimulations;
+            
+            // Display result
+            const resultContainer = document.getElementById('empiricalResult');
+            let resultText = '';
+            let isCheating = empiricalProbability < 0.05;
+            
+            if (isCheating) {
+                resultText = `
+                    <h3>🚨 CHEATING DETECTED! 🚨</h3>
+                    <div class="probability">${(empiricalProbability * 100).toFixed(2)}%</div>
+                    <p>Empirical probability (${extremeCount} out of ${numSimulations} simulations)</p>
+                    <p><strong>This die is likely loaded!</strong></p>
+                `;
+            } else {
+                resultText = `
+                    <h3>✅ Die Appears Fair ✅</h3>
+                    <div class="probability">${(empiricalProbability * 100).toFixed(2)}%</div>
+                    <p>Empirical probability (${extremeCount} out of ${numSimulations} simulations)</p>
+                    <p><strong>No evidence of cheating detected.</strong></p>
+                `;
+            }
+            
+            resultContainer.innerHTML = resultText;
+            
+            // Show continue button
+            document.getElementById('proceedToStep4').style.display = 'inline-block';
+        }
+
+        function theoreticalDetection() {
+            const suspiciousAvg = parseFloat(document.getElementById('suspiciousAverage').value);
+            const numRolls = parseInt(document.getElementById('suspiciousRolls').value);
+            
+            // Calculate statistics for fair die using CLT
+            const expectedMean = 10.5;
+            const variance = ((20 - 1) * (20 + 1)) / 12; // Variance of uniform distribution
+            const standardError = Math.sqrt(variance / numRolls);
+            
+            // Update the explanation with current values
+            document.getElementById('stdErrorDisplay').textContent = standardError.toFixed(3);
+            
+            // Calculate z-score
+            const zScore = (suspiciousAvg - expectedMean) / standardError;
+            
+            // Calculate p-value (two-tailed test)
+            const pValue = 2 * (1 - normalCDF(Math.abs(zScore)));
+            
+            // Display result
+            const resultContainer = document.getElementById('cheatingResult');
+            let resultText = '';
+            let isCheating = pValue < 0.05;
+            
+            if (isCheating) {
+                resultText = `
+                    <h3>🚨 CHEATING DETECTED! 🚨</h3>
+                    <div class="probability">${(pValue * 100).toFixed(2)}%</div>
+                    <p>Theoretical probability using Central Limit Theorem</p>
+                    <p><strong>This die is likely loaded!</strong></p>
+                `;
+            } else {
+                resultText = `
+                    <h3>✅ Die Appears Fair ✅</h3>
+                    <div class="probability">${(pValue * 100).toFixed(2)}%</div>
+                    <p>Theoretical probability using Central Limit Theorem</p>
+                    <p><strong>No evidence of cheating detected.</strong></p>
+                `;
+            }
+            
+            resultContainer.innerHTML = resultText;
+            
+            // Update detection chart with theoretical normal distribution
+            updateDetectionChart(suspiciousAvg, expectedMean, standardError);
+        }
+
+        function updateDetectionChart(suspiciousAvg, mean, stdDev) {
+            const xValues = [];
+            const yValues = [];
+            const suspiciousY = [];
+            
+            // Create a range of x values
+            const step = stdDev / 20;
+            for (let x = mean - 4 * stdDev; x <= mean + 4 * stdDev; x += step) {
+                xValues.push(x.toFixed(2));
+                yValues.push(normalPDF(x, mean, stdDev));
+                suspiciousY.push(null); // Initialize all as null
+            }
+            
+            // Find the closest x value to suspiciousAvg and set its y value
+            const suspiciousIndex = Math.round((suspiciousAvg - (mean - 4 * stdDev)) / step);
+            if (suspiciousIndex >= 0 && suspiciousIndex < suspiciousY.length) {
+                suspiciousY[suspiciousIndex] = normalPDF(suspiciousAvg, mean, stdDev);
+            }
+            
+            detectionChart.data.labels = xValues;
+            detectionChart.data.datasets[0].data = yValues;
+            detectionChart.data.datasets[1].data = suspiciousY;
+            detectionChart.update();
+        }
+
+        function showStep(step) {
+            // Hide all sections
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`section${i}`).classList.add('hidden');
+                document.getElementById(`step${i}`).classList.remove('active', 'completed');
+            }
+            
+            // Show current step
+            document.getElementById(`section${step}`).classList.remove('hidden');
+            document.getElementById(`section${step}`).classList.add('fade-in');
+            document.getElementById(`step${step}`).classList.add('active');
+            
+            // Mark previous steps as completed
+            for (let i = 1; i < step; i++) {
+                document.getElementById(`step${i}`).classList.add('completed');
+            }
+            
+            currentStep = step;
+        }
+
+        // Normal distribution functions
+        function normalPDF(x, mean, stdDev) {
+            const variance = stdDev * stdDev;
+            const coefficient = 1 / Math.sqrt(2 * Math.PI * variance);
+            const exponent = -0.5 * Math.pow(x - mean, 2) / variance;
+            return coefficient * Math.exp(exponent);
+        }
+
+        function normalCDF(x) {
+            // Approximation of the cumulative distribution function
+            return 0.5 * (1 + erf(x / Math.sqrt(2)));
+        }
+
+        function erf(x) {
+            // Approximation of the error function
+            const a1 =  0.254829592;
+            const a2 = -0.284496736;
+            const a3 =  1.421413741;
+            const a4 = -1.453152027;
+            const a5 =  1.061405429;
+            const p  =  0.3275911;
+            
+            const sign = x >= 0 ? 1 : -1;
+            x = Math.abs(x);
+            
+            const t = 1.0 / (1.0 + p * x);
+            const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+            
+            return sign * y;
+        }
+
+        // Progression functions
+        function proceedToStep2() {
+            showStep(2);
+            calculateAverages();
+        }
+
+        function proceedToStep3() {
+            showStep(3);
+        }
+
+        function proceedToStep4() {
+            showStep(4);
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+        });
+    </script>
+</body>
+</html>

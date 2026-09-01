@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation Bias Experiment</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Confirmation Bias Experiment</h1>
+            <p>Guess the rule that governs triples of integers (a, b, c) by submitting examples!</p>
+        </header>
+
+        <div class="experiment-section">
+            <div class="input-form">
+                <h2>Submit Your Example</h2>
+                <form id="exampleForm">
+                    <div class="form-group">
+                        <label for="hypothesis">Your hypothesized rule:</label>
+                        <select id="hypothesis" required>
+                            <option value="">Select a rule...</option>
+                            <option value="arithmetic">Arithmetic progression: (a, a+2, a+4)</option>
+                            <option value="geometric">Geometric progression: (a, 2a, 3a)</option>
+                            <option value="fibonacci">Fibonacci-like: (a, b, a+b)</option>
+                            <option value="consecutive">Consecutive evens: (a, a+2, a+4) where a is even</option>
+                            <option value="multiples">Multiples of 2: (2a, 2a+2, 2a+4)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="a">Value a:</label>
+                        <input type="number" id="a" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="b">Value b:</label>
+                        <input type="number" id="b" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="c">Value c:</label>
+                        <input type="number" id="c" required>
+                    </div>
+                    
+                    <button type="submit">Submit Example</button>
+                </form>
+            </div>
+
+            <div class="result-section">
+                <div id="result" class="result-message"></div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Results Analysis</h2>
+            <div class="chart-container">
+                <canvas id="resultsChart"></canvas>
+            </div>
+            <div class="stats">
+                <p>Total examples submitted: <span id="totalExamples">0</span></p>
+                <p>Positive examples: <span id="positiveExamples">0</span></p>
+                <p>Negative examples: <span id="negativeExamples">0</span></p>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>About This Experiment</h2>
+            <p>This experiment demonstrates confirmation bias - the tendency to search for, interpret, and recall information in a way that confirms one's preexisting beliefs.</p>
+            <p><strong>The actual rule is simple: a < b < c</strong> (the numbers must be in ascending order)</p>
+            <p>Notice how your choice of examples might be influenced by your hypothesized rule, leading you to test examples that confirm rather than challenge your hypothesis.</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

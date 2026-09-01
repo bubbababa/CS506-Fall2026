@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Significance Demonstration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Fake Significance Demonstration</h1>
+            <p class="subtitle">Illustrating the multiple comparisons problem with student data</p>
+        </header>
+
+        <div class="explanation">
+            <h2>About This Demonstration</h2>
+            <p>This tool demonstrates the "multiple comparisons problem" - when you test many variables, you're likely to find at least one "significant" result by chance alone. Enter data for 5 students before and after a study, then see how many variables show "significant" changes!</p>
+        </div>
+
+        <div class="timer-section">
+            <h2>⏱️ Measurement Timer</h2>
+            <p>Use this timer to accurately measure heart beats and breaths in 10-second intervals.</p>
+            <div class="timer-container">
+                <div class="timer-display">
+                    <span id="timer-seconds">10</span>
+                    <span class="timer-label">seconds</span>
+                </div>
+                <div class="timer-controls">
+                    <button id="start-timer" class="timer-btn start">Start Timer</button>
+                    <button id="reset-timer" class="timer-btn reset">Reset</button>
+                </div>
+                <div class="timer-status" id="timer-status">Ready to start</div>
+                <div class="timer-instructions">
+                    <p><strong>Quick Tips:</strong></p>
+                    <ul>
+                        <li>Press <kbd>Space</kbd> or <kbd>T</kbd> to start timer</li>
+                        <li>Press <kbd>R</kbd> to reset</li>
+                        <li>Count heart beats by feeling your pulse</li>
+                        <li>Count breaths by watching chest movement</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-input">
+            <div class="section before-section">
+                <h2>📊 BEFORE Study</h2>
+                <div class="students-grid">
+                    <div class="student-card" data-student="1">
+                        <h3>Student 1</h3>
+                        <div class="input-group">
+                            <label for="student_1_heart_beats_before">Heart beats (10s):</label>
+                            <input type="number" id="student_1_heart_beats_before" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_breaths_before">Breaths (10s):</label>
+                            <input type="number" id="student_1_breaths_before" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_happiness_before">Happiness (1-10):</label>
+                            <input type="number" id="student_1_happiness_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_confidence_before">Confidence (1-10):</label>
+                            <input type="number" id="student_1_confidence_before" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_focus_before">Focus (1-10):</label>
+                            <input type="number" id="student_1_focus_before" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_comfort_before">Comfort (1-10):</label>
+                            <input type="number" id="student_1_comfort_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="2">
+                        <h3>Student 2</h3>
+                        <div class="input-group">
+                            <label for="student_2_heart_beats_before">Heart beats (10s):</label>
+                            <input type="number" id="student_2_heart_beats_before" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_breaths_before">Breaths (10s):</label>
+                            <input type="number" id="student_2_breaths_before" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_happiness_before">Happiness (1-10):</label>
+                            <input type="number" id="student_2_happiness_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_confidence_before">Confidence (1-10):</label>
+                            <input type="number" id="student_2_confidence_before" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_focus_before">Focus (1-10):</label>
+                            <input type="number" id="student_2_focus_before" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_comfort_before">Comfort (1-10):</label>
+                            <input type="number" id="student_2_comfort_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="3">
+                        <h3>Student 3</h3>
+                        <div class="input-group">
+                            <label for="student_3_heart_beats_before">Heart beats (10s):</label>
+                            <input type="number" id="student_3_heart_beats_before" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_breaths_before">Breaths (10s):</label>
+                            <input type="number" id="student_3_breaths_before" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_happiness_before">Happiness (1-10):</label>
+                            <input type="number" id="student_3_happiness_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_confidence_before">Confidence (1-10):</label>
+                            <input type="number" id="student_3_confidence_before" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_focus_before">Focus (1-10):</label>
+                            <input type="number" id="student_3_focus_before" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_comfort_before">Comfort (1-10):</label>
+                            <input type="number" id="student_3_comfort_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="4">
+                        <h3>Student 4</h3>
+                        <div class="input-group">
+                            <label for="student_4_heart_beats_before">Heart beats (10s):</label>
+                            <input type="number" id="student_4_heart_beats_before" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_breaths_before">Breaths (10s):</label>
+                            <input type="number" id="student_4_breaths_before" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_happiness_before">Happiness (1-10):</label>
+                            <input type="number" id="student_4_happiness_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_confidence_before">Confidence (1-10):</label>
+                            <input type="number" id="student_4_confidence_before" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_focus_before">Focus (1-10):</label>
+                            <input type="number" id="student_4_focus_before" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_comfort_before">Comfort (1-10):</label>
+                            <input type="number" id="student_4_comfort_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="5">
+                        <h3>Student 5</h3>
+                        <div class="input-group">
+                            <label for="student_5_heart_beats_before">Heart beats (10s):</label>
+                            <input type="number" id="student_5_heart_beats_before" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_breaths_before">Breaths (10s):</label>
+                            <input type="number" id="student_5_breaths_before" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_happiness_before">Happiness (1-10):</label>
+                            <input type="number" id="student_5_happiness_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_confidence_before">Confidence (1-10):</label>
+                            <input type="number" id="student_5_confidence_before" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_focus_before">Focus (1-10):</label>
+                            <input type="number" id="student_5_focus_before" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_comfort_before">Comfort (1-10):</label>
+                            <input type="number" id="student_5_comfort_before" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section after-section">
+                <h2>📈 AFTER Study</h2>
+                <div class="students-grid">
+                    <div class="student-card" data-student="1">
+                        <h3>Student 1</h3>
+                        <div class="input-group">
+                            <label for="student_1_heart_beats_after">Heart beats (10s):</label>
+                            <input type="number" id="student_1_heart_beats_after" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_breaths_after">Breaths (10s):</label>
+                            <input type="number" id="student_1_breaths_after" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_happiness_after">Happiness (1-10):</label>
+                            <input type="number" id="student_1_happiness_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_confidence_after">Confidence (1-10):</label>
+                            <input type="number" id="student_1_confidence_after" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_focus_after">Focus (1-10):</label>
+                            <input type="number" id="student_1_focus_after" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_1_comfort_after">Comfort (1-10):</label>
+                            <input type="number" id="student_1_comfort_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="2">
+                        <h3>Student 2</h3>
+                        <div class="input-group">
+                            <label for="student_2_heart_beats_after">Heart beats (10s):</label>
+                            <input type="number" id="student_2_heart_beats_after" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_breaths_after">Breaths (10s):</label>
+                            <input type="number" id="student_2_breaths_after" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_happiness_after">Happiness (1-10):</label>
+                            <input type="number" id="student_2_happiness_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_confidence_after">Confidence (1-10):</label>
+                            <input type="number" id="student_2_confidence_after" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_focus_after">Focus (1-10):</label>
+                            <input type="number" id="student_2_focus_after" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_2_comfort_after">Comfort (1-10):</label>
+                            <input type="number" id="student_2_comfort_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="3">
+                        <h3>Student 3</h3>
+                        <div class="input-group">
+                            <label for="student_3_heart_beats_after">Heart beats (10s):</label>
+                            <input type="number" id="student_3_heart_beats_after" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_breaths_after">Breaths (10s):</label>
+                            <input type="number" id="student_3_breaths_after" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_happiness_after">Happiness (1-10):</label>
+                            <input type="number" id="student_3_happiness_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_confidence_after">Confidence (1-10):</label>
+                            <input type="number" id="student_3_confidence_after" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_focus_after">Focus (1-10):</label>
+                            <input type="number" id="student_3_focus_after" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_3_comfort_after">Comfort (1-10):</label>
+                            <input type="number" id="student_3_comfort_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="4">
+                        <h3>Student 4</h3>
+                        <div class="input-group">
+                            <label for="student_4_heart_beats_after">Heart beats (10s):</label>
+                            <input type="number" id="student_4_heart_beats_after" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_breaths_after">Breaths (10s):</label>
+                            <input type="number" id="student_4_breaths_after" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_happiness_after">Happiness (1-10):</label>
+                            <input type="number" id="student_4_happiness_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_confidence_after">Confidence (1-10):</label>
+                            <input type="number" id="student_4_confidence_after" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_focus_after">Focus (1-10):</label>
+                            <input type="number" id="student_4_focus_after" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_4_comfort_after">Comfort (1-10):</label>
+                            <input type="number" id="student_4_comfort_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+
+                    <div class="student-card" data-student="5">
+                        <h3>Student 5</h3>
+                        <div class="input-group">
+                            <label for="student_5_heart_beats_after">Heart beats (10s):</label>
+                            <input type="number" id="student_5_heart_beats_after" min="0" step="0.1" placeholder="e.g., 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_breaths_after">Breaths (10s):</label>
+                            <input type="number" id="student_5_breaths_after" min="0" step="0.1" placeholder="e.g., 3">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_happiness_after">Happiness (1-10):</label>
+                            <input type="number" id="student_5_happiness_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_confidence_after">Confidence (1-10):</label>
+                            <input type="number" id="student_5_confidence_after" min="1" max="10" step="0.1" placeholder="e.g., 6">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_focus_after">Focus (1-10):</label>
+                            <input type="number" id="student_5_focus_after" min="1" max="10" step="0.1" placeholder="e.g., 8">
+                        </div>
+                        <div class="input-group">
+                            <label for="student_5_comfort_after">Comfort (1-10):</label>
+                            <input type="number" id="student_5_comfort_after" min="1" max="10" step="0.1" placeholder="e.g., 7">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-section">
+            <button id="analyze-btn" class="analyze-button">🔬 Analyze Results</button>
+            <button id="sample-data-btn" class="sample-button">🎲 Generate Random Data</button>
+        </div>
+
+        <div id="results-section" class="results-section" style="display: none;">
+            <h2>📊 Analysis Results</h2>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <h3>Total Tests</h3>
+                    <p id="total-tests">6</p>
+                </div>
+                <div class="stat-card significant">
+                    <h3>Significant Results</h3>
+                    <p id="significant-count">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>False Positive Rate</h3>
+                    <p id="false-positive-rate">0%</p>
+                </div>
+            </div>
+            
+            <div class="results-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Before Mean</th>
+                            <th>After Mean</th>
+                            <th>Change</th>
+                            <th>P-Value</th>
+                            <th>Significant?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="interpretation">
+                <h3>💡 What This Means</h3>
+                <p>With 6 statistical tests, there's about a <strong>26% chance</strong> of finding at least one "significant" result purely by chance (even if nothing actually changed). This is the multiple comparisons problem!</p>
+                <p><strong>Key Takeaway:</strong> When you test many variables, you need to adjust your significance level or use methods like Bonferroni correction to avoid false positives.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+

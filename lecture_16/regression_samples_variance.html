@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linear regression — sample size &amp; noise variance</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #5eb8ff;
+      --true-line: #7ee787;
+      --fit-line: #ffb86c;
+      --normal: #bd93f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #2a3548;
+      background: var(--panel);
+    }
+    h1 { margin: 0 0 0.35rem; font-size: 1.35rem; font-weight: 600; }
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 58rem;
+    }
+    main { padding: 1rem 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="range"] { width: 220px; }
+    .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    button {
+      background: #2d3d52;
+      color: var(--text);
+      border: 1px solid #3d4f68;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #35465c; }
+    button.primary {
+      background: #1e4d7a;
+      border-color: var(--accent);
+    }
+    .canvases {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 900px) {
+      .canvases { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 10px;
+      border: 1px solid #2a3548;
+      padding: 0.75rem;
+    }
+    .card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      background: #121820;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 3px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .legend .true::before { background: var(--true-line); }
+    .legend .fit::before { background: var(--fit-line); }
+    .legend .norm::before {
+      height: 0;
+      border-bottom: 2px dashed var(--normal);
+    }
+    .stats {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    footer.note {
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 52rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sample size and Gaussian noise variance</h1>
+    <p class="lede">
+      Data follow <strong>Y = β₀ + β₁X + ε</strong> with <strong>ε ~ N(0, σ²)</strong> and X uniform on [0, 10].
+      Use the sliders to see how <em>n</em> and <em>σ²</em> change cloud scatter, the OLS line, residual spread, and the
+      match between the residual histogram and the <strong>N(0, σ²)</strong> curve (population variance you chose).
+    </p>
+  </header>
+  <main>
+    <div class="controls">
+      <label>
+        Sample size <em>n</em>
+        <span>
+          <input type="range" id="nSlider" min="20" max="2000" value="120" step="10" />
+          <span class="value" id="nVal">120</span>
+        </span>
+      </label>
+      <label>
+        Noise variance σ²
+        <span>
+          <input type="range" id="varSlider" min="0" max="100" value="12" />
+          <span class="value" id="varVal">0.52</span>
+        </span>
+      </label>
+      <button type="button" class="primary" id="resampleBtn">Resample</button>
+    </div>
+
+    <div class="canvases">
+      <div class="card">
+        <h2>Scatter &amp; least-squares line</h2>
+        <canvas id="scatterCv" width="520" height="360"></canvas>
+        <div class="legend">
+          <span class="true">True mean line</span>
+          <span class="fit">OLS fit</span>
+        </div>
+        <div class="stats" id="scatterStats"></div>
+      </div>
+      <div class="card">
+        <h2>Residuals vs. N(0, σ²)</h2>
+        <canvas id="histCv" width="520" height="360"></canvas>
+        <div class="legend">
+          <span>Histogram of OLS residuals</span>
+          <span class="norm">Normal PDF with variance σ² (slider)</span>
+        </div>
+        <div class="stats" id="histStats"></div>
+      </div>
+    </div>
+
+    <p class="note footer">
+      Larger <em>σ²</em> widens the vertical spread around the line; larger <em>n</em> fills the histogram more smoothly
+      and makes <em>β̂</em> less variable across resamples (try “Resample” a few times). The purple curve uses your
+      chosen population σ², not the RMSE from the single fit—so with small <em>n</em> the histogram can look rough
+      even when the model is correct.
+    </p>
+  </main>
+
+  <script>
+(function () {
+  const B0 = 1.2;
+  const B1 = 0.55;
+
+  const nSlider = document.getElementById("nSlider");
+  const varSlider = document.getElementById("varSlider");
+  const nVal = document.getElementById("nVal");
+  const varVal = document.getElementById("varVal");
+  const resampleBtn = document.getElementById("resampleBtn");
+  const scatterCv = document.getElementById("scatterCv");
+  const histCv = document.getElementById("histCv");
+  const sctx = scatterCv.getContext("2d");
+  const hctx = histCv.getContext("2d");
+  const scatterStats = document.getElementById("scatterStats");
+  const histStats = document.getElementById("histStats");
+
+  let xs = [];
+  let ys = [];
+
+  /** σ² from about 0.05 (tight) to 4 (very noisy), linear in slider */
+  function varianceFromSlider() {
+    const t = +varSlider.value / 100;
+    return 0.05 + t * (4 - 0.05);
+  }
+
+  function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function generateData(n, sigma2) {
+    const sigma = Math.sqrt(sigma2);
+    xs = new Array(n);
+    ys = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * 10;
+      xs[i] = x;
+      ys[i] = B0 + B1 * x + sigma * randn();
+    }
+  }
+
+  function ols(x, y) {
+    const n = x.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) {
+      sx += x[i];
+      sy += y[i];
+      sxx += x[i] * x[i];
+      sxy += x[i] * y[i];
+    }
+    const denom = n * sxx - sx * sx;
+    const b1 = denom !== 0 ? (n * sxy - sx * sy) / denom : 0;
+    const b0 = (sy - b1 * sx) / n;
+    return { b0, b1 };
+  }
+
+  function residuals(x, y, b0, b1) {
+    const r = new Array(x.length);
+    for (let i = 0; i < x.length; i++) r[i] = y[i] - (b0 + b1 * x[i]);
+    return r;
+  }
+
+  function normalPdf(z, sigma) {
+    const inv = 1 / (sigma * Math.sqrt(2 * Math.PI));
+    return inv * Math.exp(-0.5 * (z * z) / (sigma * sigma));
+  }
+
+  function drawScatter(sigma2) {
+    const W = scatterCv.width;
+    const H = scatterCv.height;
+    const pad = { l: 48, r: 16, t: 16, b: 44 };
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+
+    sctx.fillStyle = "#121820";
+    sctx.fillRect(0, 0, W, H);
+
+    const xMin = 0, xMax = 10;
+    let yMin = Infinity, yMax = -Infinity;
+    for (let i = 0; i < ys.length; i++) {
+      yMin = Math.min(yMin, ys[i]);
+      yMax = Math.max(yMax, ys[i]);
+    }
+    const yPad = (yMax - yMin) * 0.1 + 0.4;
+    yMin -= yPad;
+    yMax += yPad;
+
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * plotW;
+    const sy = (y) => pad.t + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+    const { b0, b1 } = ols(xs, ys);
+
+    sctx.strokeStyle = "#2a3548";
+    sctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const x = xMin + (i / 5) * (xMax - xMin);
+      const px = sx(x);
+      sctx.beginPath();
+      sctx.moveTo(px, pad.t);
+      sctx.lineTo(px, pad.t + plotH);
+      sctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const y = yMin + (i / 4) * (yMax - yMin);
+      const py = sy(y);
+      sctx.beginPath();
+      sctx.moveTo(pad.l, py);
+      sctx.lineTo(pad.l + plotW, py);
+      sctx.stroke();
+    }
+
+    sctx.fillStyle = "#5a6a80";
+    sctx.font = "11px system-ui";
+    sctx.textAlign = "center";
+    sctx.fillText("X", pad.l + plotW / 2, H - 10);
+    sctx.save();
+    sctx.translate(14, pad.t + plotH / 2);
+    sctx.rotate(-Math.PI / 2);
+    sctx.fillText("Y", 0, 0);
+    sctx.restore();
+
+    function lineSeg(b0l, b1l, color, width, dash) {
+      sctx.strokeStyle = color;
+      sctx.lineWidth = width;
+      sctx.setLineDash(dash || []);
+      sctx.beginPath();
+      sctx.moveTo(sx(xMin), sy(b0l + b1l * xMin));
+      sctx.lineTo(sx(xMax), sy(b0l + b1l * xMax));
+      sctx.stroke();
+      sctx.setLineDash([]);
+    }
+
+    lineSeg(B0, B1, "#7ee787", 2.5);
+    lineSeg(b0, b1, "#ffb86c", 2, [6, 4]);
+
+    for (let i = 0; i < xs.length; i++) {
+      sctx.fillStyle = "rgba(94, 184, 255, 0.7)";
+      sctx.beginPath();
+      sctx.arc(sx(xs[i]), sy(ys[i]), 2.8, 0, Math.PI * 2);
+      sctx.fill();
+    }
+
+    sctx.strokeStyle = "#5a6a80";
+    sctx.strokeRect(pad.l, pad.t, plotW, plotH);
+
+    scatterStats.textContent =
+      `OLS: β̂₀ = ${b0.toFixed(3)}, β̂₁ = ${b1.toFixed(3)}  ·  True: β₀ = ${B0}, β₁ = ${B1}  ·  σ² = ${sigma2.toFixed(3)}`;
+  }
+
+  function drawHist(res, sigma2) {
+    const W = histCv.width;
+    const H = histCv.height;
+    const pad = { l: 48, r: 16, t: 16, b: 44 };
+    const plotW = W - pad.l - pad.r;
+    const plotH = H - pad.t - pad.b;
+    const sigma = Math.sqrt(sigma2);
+    const n = res.length;
+
+    let rMin = Infinity, rMax = -Infinity;
+    for (let i = 0; i < res.length; i++) {
+      rMin = Math.min(rMin, res[i]);
+      rMax = Math.max(rMax, res[i]);
+    }
+    const padR = Math.max(sigma * 3, (rMax - rMin) * 0.08);
+    rMin -= padR;
+    rMax += padR;
+
+    hctx.fillStyle = "#121820";
+    hctx.fillRect(0, 0, W, H);
+
+    const bins = Math.min(40, Math.max(16, Math.round(n / 25)));
+    const counts = new Array(bins).fill(0);
+    for (let i = 0; i < res.length; i++) {
+      const z = res[i];
+      const b = Math.floor(((z - rMin) / (rMax - rMin)) * bins);
+      const idx = Math.min(bins - 1, Math.max(0, b));
+      counts[idx]++;
+    }
+    const maxC = Math.max(...counts, 1);
+    const binW = (rMax - rMin) / bins;
+    const barW = (plotW / bins) * 0.85;
+    const gap = (plotW / bins) * 0.15;
+
+    hctx.strokeStyle = "#2a3548";
+    hctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const z = rMin + (i / 4) * (rMax - rMin);
+      const px = pad.l + ((z - rMin) / (rMax - rMin)) * plotW;
+      hctx.beginPath();
+      hctx.moveTo(px, pad.t);
+      hctx.lineTo(px, pad.t + plotH);
+      hctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const py = pad.t + (i / 4) * plotH;
+      hctx.beginPath();
+      hctx.moveTo(pad.l, py);
+      hctx.lineTo(pad.l + plotW, py);
+      hctx.stroke();
+    }
+
+    for (let b = 0; b < bins; b++) {
+      const h = (counts[b] / maxC) * plotH * 0.92;
+      const x0 = pad.l + (b / bins) * plotW + gap / 2;
+      const y0 = pad.t + plotH - h;
+      hctx.fillStyle = "rgba(255, 182, 108, 0.55)";
+      hctx.fillRect(x0, y0, barW, h);
+    }
+
+    hctx.strokeStyle = "#bd93f9";
+    hctx.lineWidth = 2;
+    hctx.beginPath();
+    const steps = 140;
+    for (let s = 0; s <= steps; s++) {
+      const z = rMin + (s / steps) * (rMax - rMin);
+      const expectedCount = n * binW * normalPdf(z, sigma);
+      const barH = (expectedCount / maxC) * plotH * 0.92;
+      const px = pad.l + ((z - rMin) / (rMax - rMin)) * plotW;
+      const py = pad.t + plotH - Math.min(plotH * 0.98, barH);
+      if (s === 0) hctx.moveTo(px, py);
+      else hctx.lineTo(px, py);
+    }
+    hctx.stroke();
+
+    hctx.fillStyle = "#5a6a80";
+    hctx.font = "11px system-ui";
+    hctx.textAlign = "center";
+    hctx.fillText("Residual", pad.l + plotW / 2, H - 10);
+    hctx.save();
+    hctx.translate(14, pad.t + plotH / 2);
+    hctx.rotate(-Math.PI / 2);
+    hctx.fillText("Count", 0, 0);
+    hctx.restore();
+
+    hctx.strokeStyle = "#5a6a80";
+    hctx.strokeRect(pad.l, pad.t, plotW, plotH);
+
+    let sse = 0;
+    for (let i = 0; i < res.length; i++) sse += res[i] * res[i];
+    const rmse = Math.sqrt(sse / Math.max(1, n - 2));
+    histStats.textContent =
+      `RMSE of residuals ≈ ${rmse.toFixed(3)}  ·  √(population σ²) = ${sigma.toFixed(3)}`;
+  }
+
+  function syncVarLabel() {
+    const v = varianceFromSlider();
+    varVal.textContent = v.toFixed(3);
+  }
+
+  function redraw() {
+    const n = +nSlider.value;
+    const sigma2 = varianceFromSlider();
+    nVal.textContent = String(n);
+    syncVarLabel();
+    generateData(n, sigma2);
+    const { b0, b1 } = ols(xs, ys);
+    const res = residuals(xs, ys, b0, b1);
+    drawScatter(sigma2);
+    drawHist(res, sigma2);
+  }
+
+  nSlider.addEventListener("input", redraw);
+  varSlider.addEventListener("input", redraw);
+  resampleBtn.addEventListener("click", redraw);
+  syncVarLabel();
+  redraw();
+})();
+  </script>
+</body>
+</html>

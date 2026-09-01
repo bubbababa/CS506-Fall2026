@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Variables & Variance - Interactive Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .demo-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #4a5568;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .control-group {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+            margin: 10px 0;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .value-display {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .stats-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .practical-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .example-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .example-card h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .example-card p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .animation-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .formula-box {
+            background: #f0f4f8;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .formula-box h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-item {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .comparison-item h4 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎲 Random Variables & Variance</h1>
+            <p>Interactive Demonstration for Introduction to Statistics</p>
+        </div>
+
+        <!-- Discrete vs Continuous Section -->
+        <div class="demo-section">
+            <h2 class="section-title">Discrete vs Continuous Random Variables</h2>
+            
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>🎯 Discrete Random Variables</h4>
+                    <p><strong>Definition:</strong> Can only take specific, countable values</p>
+                    <p><strong>Examples:</strong> Number of heads in coin flips, dice rolls, number of students in class</p>
+                    <p><strong>Probability:</strong> P(X = x) for specific values</p>
+                </div>
+                <div class="comparison-item">
+                    <h4>📊 Continuous Random Variables</h4>
+                    <p><strong>Definition:</strong> Can take any value in a continuous range</p>
+                    <p><strong>Examples:</strong> Height, weight, temperature, time</p>
+                    <p><strong>Probability:</strong> P(a ≤ X ≤ b) for intervals</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discrete Random Variables Demo -->
+        <div class="demo-section">
+            <h2 class="section-title">🎲 Discrete Random Variables</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="diceSides">Number of Dice Sides:</label>
+                    <input type="range" id="diceSides" class="slider" min="2" max="20" value="6">
+                    <div class="value-display" id="diceSidesValue">6</div>
+                </div>
+                <div class="control-group">
+                    <label for="numTrials">Number of Trials:</label>
+                    <input type="range" id="numTrials" class="slider" min="10" max="1000" value="100">
+                    <div class="value-display" id="numTrialsValue">100</div>
+                </div>
+                <div class="control-group">
+                    <label for="coinFlips">Number of Coin Flips:</label>
+                    <input type="range" id="coinFlips" class="slider" min="1" max="10" value="3">
+                    <div class="value-display" id="coinFlipsValue">3</div>
+                </div>
+            </div>
+
+            <div class="animation-controls">
+                <button class="btn" onclick="simulateDiscrete()">🎲 Simulate Dice</button>
+                <button class="btn" onclick="simulateCoinFlips()">🪙 Simulate Coin Flips</button>
+                <button class="btn" onclick="animateDiscrete()">▶️ Animate</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="discreteChart"></canvas>
+            </div>
+
+            <div class="stats-display">
+                <div class="stat-card">
+                    <h3>Mean (Expected Value)</h3>
+                    <div class="value" id="discreteMean">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Variance</h3>
+                    <div class="value" id="discreteVariance">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Standard Deviation</h3>
+                    <div class="value" id="discreteStdDev">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Sample Size</h3>
+                    <div class="value" id="discreteSampleSize">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Continuous Random Variables Demo -->
+        <div class="demo-section">
+            <h2 class="section-title">📊 Continuous Random Variables</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="distributionType">Distribution Type:</label>
+                    <select id="distributionType" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #e2e8f0;">
+                        <option value="normal">Normal Distribution</option>
+                        <option value="uniform">Uniform Distribution</option>
+                        <option value="exponential">Exponential Distribution</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="mean">Mean (μ):</label>
+                    <input type="range" id="mean" class="slider" min="-5" max="5" value="0" step="0.1">
+                    <div class="value-display" id="meanValue">0.0</div>
+                </div>
+                <div class="control-group">
+                    <label for="stdDev">Standard Deviation (σ):</label>
+                    <input type="range" id="stdDev" class="slider" min="0.1" max="3" value="1" step="0.1">
+                    <div class="value-display" id="stdDevValue">1.0</div>
+                </div>
+                <div class="control-group">
+                    <label for="sampleSize">Sample Size:</label>
+                    <input type="range" id="sampleSize" class="slider" min="100" max="5000" value="1000">
+                    <div class="value-display" id="sampleSizeValue">1000</div>
+                </div>
+            </div>
+
+            <div class="animation-controls">
+                <button class="btn" onclick="simulateContinuous()">📊 Generate Sample</button>
+                <button class="btn" onclick="animateContinuous()">▶️ Animate</button>
+                <button class="btn" onclick="showVarianceAnimation()">📈 Show Variance</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="continuousChart"></canvas>
+            </div>
+
+            <div class="stats-display">
+                <div class="stat-card">
+                    <h3>Sample Mean</h3>
+                    <div class="value" id="continuousMean">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Sample Variance</h3>
+                    <div class="value" id="continuousVariance">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Sample Std Dev</h3>
+                    <div class="value" id="continuousStdDev">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Theoretical Variance</h3>
+                    <div class="value" id="theoreticalVariance">1.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variance Visualization -->
+        <div class="demo-section">
+            <h2 class="section-title">📈 Understanding Variance</h2>
+            
+            <div class="formula-box">
+                <h4>Variance Formula</h4>
+                <p>For a discrete random variable: $\text{Var}(X) = E[(X - \mu)^2] = \sum_{i} (x_i - \mu)^2 \cdot P(x_i)$</p>
+                <p>For a continuous random variable: $\text{Var}(X) = \int_{-\infty}^{\infty} (x - \mu)^2 f(x) dx$</p>
+                <p>Alternative formula: $\text{Var}(X) = E[X^2] - (E[X])^2$</p>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="varianceDemo">Variance Level:</label>
+                    <input type="range" id="varianceDemo" class="slider" min="0.1" max="3" value="1" step="0.1">
+                    <div class="value-display" id="varianceDemoValue">1.0</div>
+                </div>
+            </div>
+
+            <div class="animation-controls">
+                <button class="btn" onclick="demonstrateVariance()">📊 Show Variance Effect</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="varianceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Practical Examples -->
+        <div class="demo-section">
+            <h2 class="section-title">🌍 Practical Examples</h2>
+            
+            <div class="practical-examples">
+                <div class="example-card">
+                    <h4>🎯 Discrete: Quality Control</h4>
+                    <p><strong>Scenario:</strong> A factory produces light bulbs. Each bulb has a 5% chance of being defective.</p>
+                    <p><strong>Random Variable:</strong> Number of defective bulbs in a batch of 100</p>
+                    <p><strong>Distribution:</strong> Binomial(n=100, p=0.05)</p>
+                    <p><strong>Expected Value:</strong> 5 defective bulbs</p>
+                    <p><strong>Variance:</strong> 4.75</p>
+                </div>
+
+                <div class="example-card">
+                    <h4>📊 Continuous: Student Heights</h4>
+                    <p><strong>Scenario:</strong> Heights of students in a university class</p>
+                    <p><strong>Random Variable:</strong> Height in inches</p>
+                    <p><strong>Distribution:</strong> Normal(μ=68, σ=3)</p>
+                    <p><strong>Expected Value:</strong> 68 inches</p>
+                    <p><strong>Variance:</strong> 9 square inches</p>
+                </div>
+
+                <div class="example-card">
+                    <h4>🎲 Discrete: Game Theory</h4>
+                    <p><strong>Scenario:</strong> Rolling two dice in a board game</p>
+                    <p><strong>Random Variable:</strong> Sum of two dice</p>
+                    <p><strong>Distribution:</strong> Discrete uniform with triangular shape</p>
+                    <p><strong>Expected Value:</strong> 7</p>
+                    <p><strong>Variance:</strong> 5.83</p>
+                </div>
+
+                <div class="example-card">
+                    <h4>⏰ Continuous: Waiting Times</h4>
+                    <p><strong>Scenario:</strong> Time between customer arrivals at a coffee shop</p>
+                    <p><strong>Random Variable:</strong> Time in minutes</p>
+                    <p><strong>Distribution:</strong> Exponential(λ=0.1)</p>
+                    <p><strong>Expected Value:</strong> 10 minutes</p>
+                    <p><strong>Variance:</strong> 100 square minutes</p>
+                </div>
+
+                <div class="example-card">
+                    <h4>📈 Discrete: Survey Responses</h4>
+                    <p><strong>Scenario:</strong> Number of "yes" responses in a survey of 50 people</p>
+                    <p><strong>Random Variable:</strong> Count of yes responses</p>
+                    <p><strong>Distribution:</strong> Binomial(n=50, p=0.6)</p>
+                    <p><strong>Expected Value:</strong> 30 yes responses</p>
+                    <p><strong>Variance:</strong> 12</p>
+                </div>
+
+                <div class="example-card">
+                    <h4>🌡️ Continuous: Temperature</h4>
+                    <p><strong>Scenario:</strong> Daily high temperature in Boston during summer</p>
+                    <p><strong>Random Variable:</strong> Temperature in Fahrenheit</p>
+                    <p><strong>Distribution:</strong> Normal(μ=78, σ=5)</p>
+                    <p><strong>Expected Value:</strong> 78°F</p>
+                    <p><strong>Variance:</strong> 25 square degrees</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for charts
+        let discreteChart, continuousChart, varianceChart;
+        let animationId;
+
+        // Initialize charts
+        function initCharts() {
+            // Discrete Chart
+            const discreteCtx = document.getElementById('discreteChart').getContext('2d');
+            discreteChart = new Chart(discreteCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Frequency',
+                        data: [],
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Discrete Random Variable Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Continuous Chart
+            const continuousCtx = document.getElementById('continuousChart').getContext('2d');
+            continuousChart = new Chart(continuousCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Probability Density',
+                        data: [],
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Continuous Random Variable Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Probability Density'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Variance Chart
+            const varianceCtx = document.getElementById('varianceChart').getContext('2d');
+            varianceChart = new Chart(varianceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Low Variance (σ=0.5)',
+                            data: [],
+                            borderColor: 'rgba(72, 187, 120, 1)',
+                            backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Medium Variance (σ=1.0)',
+                            data: [],
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'High Variance (σ=2.0)',
+                            data: [],
+                            borderColor: 'rgba(245, 101, 101, 1)',
+                            backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Effect of Variance on Normal Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Probability Density'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update slider value displays
+        function updateSliderDisplays() {
+            document.getElementById('diceSidesValue').textContent = document.getElementById('diceSides').value;
+            document.getElementById('numTrialsValue').textContent = document.getElementById('numTrials').value;
+            document.getElementById('coinFlipsValue').textContent = document.getElementById('coinFlips').value;
+            document.getElementById('meanValue').textContent = parseFloat(document.getElementById('mean').value).toFixed(1);
+            document.getElementById('stdDevValue').textContent = parseFloat(document.getElementById('stdDev').value).toFixed(1);
+            document.getElementById('sampleSizeValue').textContent = document.getElementById('sampleSize').value;
+            document.getElementById('varianceDemoValue').textContent = parseFloat(document.getElementById('varianceDemo').value).toFixed(1);
+        }
+
+        // Add event listeners to sliders
+        function addSliderListeners() {
+            const sliders = document.querySelectorAll('.slider');
+            sliders.forEach(slider => {
+                slider.addEventListener('input', updateSliderDisplays);
+            });
+        }
+
+        // Simulate dice rolls
+        function simulateDiscrete() {
+            const sides = parseInt(document.getElementById('diceSides').value);
+            const trials = parseInt(document.getElementById('numTrials').value);
+            
+            const results = {};
+            for (let i = 1; i <= sides; i++) {
+                results[i] = 0;
+            }
+            
+            for (let i = 0; i < trials; i++) {
+                const roll = Math.floor(Math.random() * sides) + 1;
+                results[roll]++;
+            }
+            
+            const labels = Object.keys(results);
+            const data = Object.values(results);
+            
+            discreteChart.data.labels = labels;
+            discreteChart.data.datasets[0].data = data;
+            discreteChart.update();
+            
+            // Calculate statistics
+            const mean = labels.reduce((sum, label, i) => sum + parseInt(label) * data[i], 0) / trials;
+            const variance = labels.reduce((sum, label, i) => sum + Math.pow(parseInt(label) - mean, 2) * data[i], 0) / trials;
+            const stdDev = Math.sqrt(variance);
+            
+            document.getElementById('discreteMean').textContent = mean.toFixed(2);
+            document.getElementById('discreteVariance').textContent = variance.toFixed(2);
+            document.getElementById('discreteStdDev').textContent = stdDev.toFixed(2);
+            document.getElementById('discreteSampleSize').textContent = trials;
+        }
+
+        // Simulate coin flips
+        function simulateCoinFlips() {
+            const numFlips = parseInt(document.getElementById('coinFlips').value);
+            const trials = parseInt(document.getElementById('numTrials').value);
+            
+            const results = {};
+            for (let i = 0; i <= numFlips; i++) {
+                results[i] = 0;
+            }
+            
+            for (let i = 0; i < trials; i++) {
+                let heads = 0;
+                for (let j = 0; j < numFlips; j++) {
+                    if (Math.random() < 0.5) heads++;
+                }
+                results[heads]++;
+            }
+            
+            const labels = Object.keys(results);
+            const data = Object.values(results);
+            
+            discreteChart.data.labels = labels;
+            discreteChart.data.datasets[0].data = data;
+            discreteChart.update();
+            
+            // Calculate statistics
+            const mean = labels.reduce((sum, label, i) => sum + parseInt(label) * data[i], 0) / trials;
+            const variance = labels.reduce((sum, label, i) => sum + Math.pow(parseInt(label) - mean, 2) * data[i], 0) / trials;
+            const stdDev = Math.sqrt(variance);
+            
+            document.getElementById('discreteMean').textContent = mean.toFixed(2);
+            document.getElementById('discreteVariance').textContent = variance.toFixed(2);
+            document.getElementById('discreteStdDev').textContent = stdDev.toFixed(2);
+            document.getElementById('discreteSampleSize').textContent = trials;
+        }
+
+        // Simulate continuous distribution
+        function simulateContinuous() {
+            const distributionType = document.getElementById('distributionType').value;
+            const mean = parseFloat(document.getElementById('mean').value);
+            const stdDev = parseFloat(document.getElementById('stdDev').value);
+            const sampleSize = parseInt(document.getElementById('sampleSize').value);
+            
+            let samples = [];
+            
+            switch (distributionType) {
+                case 'normal':
+                    samples = generateNormalSamples(mean, stdDev, sampleSize);
+                    break;
+                case 'uniform':
+                    const a = mean - stdDev * Math.sqrt(12) / 2;
+                    const b = mean + stdDev * Math.sqrt(12) / 2;
+                    samples = generateUniformSamples(a, b, sampleSize);
+                    break;
+                case 'exponential':
+                    const lambda = 1 / mean;
+                    samples = generateExponentialSamples(lambda, sampleSize);
+                    break;
+            }
+            
+            // Create histogram
+            const numBins = 30;
+            const min = Math.min(...samples);
+            const max = Math.max(...samples);
+            const binWidth = (max - min) / numBins;
+            
+            const bins = [];
+            const binCounts = [];
+            
+            for (let i = 0; i < numBins; i++) {
+                const binStart = min + i * binWidth;
+                const binEnd = min + (i + 1) * binWidth;
+                bins.push((binStart + binEnd) / 2);
+                binCounts.push(0);
+            }
+            
+            samples.forEach(sample => {
+                const binIndex = Math.min(Math.floor((sample - min) / binWidth), numBins - 1);
+                binCounts[binIndex]++;
+            });
+            
+            // Normalize to probability density
+            const normalizedCounts = binCounts.map(count => count / (sampleSize * binWidth));
+            
+            continuousChart.data.labels = bins;
+            continuousChart.data.datasets[0].data = normalizedCounts;
+            continuousChart.update();
+            
+            // Calculate statistics
+            const sampleMean = samples.reduce((sum, x) => sum + x, 0) / sampleSize;
+            const sampleVariance = samples.reduce((sum, x) => sum + Math.pow(x - sampleMean, 2), 0) / (sampleSize - 1);
+            const sampleStdDev = Math.sqrt(sampleVariance);
+            
+            let theoreticalVariance;
+            switch (distributionType) {
+                case 'normal':
+                    theoreticalVariance = stdDev * stdDev;
+                    break;
+                case 'uniform':
+                    theoreticalVariance = Math.pow(stdDev, 2);
+                    break;
+                case 'exponential':
+                    theoreticalVariance = Math.pow(mean, 2);
+                    break;
+            }
+            
+            document.getElementById('continuousMean').textContent = sampleMean.toFixed(2);
+            document.getElementById('continuousVariance').textContent = sampleVariance.toFixed(2);
+            document.getElementById('continuousStdDev').textContent = sampleStdDev.toFixed(2);
+            document.getElementById('theoreticalVariance').textContent = theoreticalVariance.toFixed(2);
+        }
+
+        // Generate normal distribution samples using Box-Muller transform
+        function generateNormalSamples(mean, stdDev, n) {
+            const samples = [];
+            for (let i = 0; i < n; i++) {
+                const u1 = Math.random();
+                const u2 = Math.random();
+                const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                samples.push(z0 * stdDev + mean);
+            }
+            return samples;
+        }
+
+        // Generate uniform distribution samples
+        function generateUniformSamples(a, b, n) {
+            const samples = [];
+            for (let i = 0; i < n; i++) {
+                samples.push(a + Math.random() * (b - a));
+            }
+            return samples;
+        }
+
+        // Generate exponential distribution samples
+        function generateExponentialSamples(lambda, n) {
+            const samples = [];
+            for (let i = 0; i < n; i++) {
+                const u = Math.random();
+                samples.push(-Math.log(1 - u) / lambda);
+            }
+            return samples;
+        }
+
+        // Demonstrate variance effect
+        function demonstrateVariance() {
+            const variance = parseFloat(document.getElementById('varianceDemo').value);
+            const stdDev = Math.sqrt(variance);
+            
+            const x = [];
+            const lowVar = [];
+            const medVar = [];
+            const highVar = [];
+            
+            for (let i = -6; i <= 6; i += 0.2) {
+                x.push(i);
+                lowVar.push(normalPDF(i, 0, 0.5));
+                medVar.push(normalPDF(i, 0, 1.0));
+                highVar.push(normalPDF(i, 0, 2.0));
+            }
+            
+            varianceChart.data.labels = x;
+            varianceChart.data.datasets[0].data = lowVar;
+            varianceChart.data.datasets[1].data = medVar;
+            varianceChart.data.datasets[2].data = highVar;
+            varianceChart.update();
+        }
+
+        // Normal probability density function
+        function normalPDF(x, mean, stdDev) {
+            const coefficient = 1 / (stdDev * Math.sqrt(2 * Math.PI));
+            const exponent = -Math.pow(x - mean, 2) / (2 * stdDev * stdDev);
+            return coefficient * Math.exp(exponent);
+        }
+
+        // Animation functions
+        function animateDiscrete() {
+            let frame = 0;
+            const maxFrames = 60;
+            
+            function animate() {
+                if (frame < maxFrames) {
+                    const progress = frame / maxFrames;
+                    const currentTrials = Math.floor(progress * parseInt(document.getElementById('numTrials').value));
+                    
+                    // Update slider temporarily
+                    const originalValue = document.getElementById('numTrials').value;
+                    document.getElementById('numTrials').value = currentTrials;
+                    updateSliderDisplays();
+                    
+                    simulateDiscrete();
+                    
+                    frame++;
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    // Restore original value
+                    document.getElementById('numTrials').value = originalValue;
+                    updateSliderDisplays();
+                }
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            animate();
+        }
+
+        function animateContinuous() {
+            let frame = 0;
+            const maxFrames = 60;
+            
+            function animate() {
+                if (frame < maxFrames) {
+                    const progress = frame / maxFrames;
+                    const currentSampleSize = Math.floor(progress * parseInt(document.getElementById('sampleSize').value));
+                    
+                    // Update slider temporarily
+                    const originalValue = document.getElementById('sampleSize').value;
+                    document.getElementById('sampleSize').value = currentSampleSize;
+                    updateSliderDisplays();
+                    
+                    simulateContinuous();
+                    
+                    frame++;
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    // Restore original value
+                    document.getElementById('sampleSize').value = originalValue;
+                    updateSliderDisplays();
+                }
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            animate();
+        }
+
+        function showVarianceAnimation() {
+            let frame = 0;
+            const maxFrames = 120;
+            
+            function animate() {
+                if (frame < maxFrames) {
+                    const progress = frame / maxFrames;
+                    const variance = 0.1 + progress * 2.9; // Animate from 0.1 to 3.0
+                    
+                    // Update slider temporarily
+                    const originalValue = document.getElementById('varianceDemo').value;
+                    document.getElementById('varianceDemo').value = variance;
+                    updateSliderDisplays();
+                    
+                    demonstrateVariance();
+                    
+                    frame++;
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    // Restore original value
+                    document.getElementById('varianceDemo').value = originalValue;
+                    updateSliderDisplays();
+                }
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            animate();
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            addSliderListeners();
+            updateSliderDisplays();
+            simulateDiscrete();
+            simulateContinuous();
+            demonstrateVariance();
+        });
+    </script>
+</body>
+</html>
